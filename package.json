@@ -1,0 +1,26 @@
+{
+  "name": "chess",
+  "version": "1.0.0",
+  "description": "Chess in JS",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Ambrose McJunkin <ambrose.mcjunkin@gmail.com>",
+  "license": "ISC",
+  "devDependencies": {
+    "browserify": "^14.1.0",
+    "del": "^2.2.2",
+    "grunt": "^1.0.1",
+    "grunt-browserify": "^5.0.0",
+    "gulp": "^3.9.1",
+    "gulp-browser": "^3.0.4",
+    "gulp-concat": "^2.6.1",
+    "gulp-sourcemaps": "^2.5.0",
+    "gulp-uglify": "^2.1.2",
+    "pixi.js": "^4.4.4"
+  },
+  "dependencies": {
+    "grunt-contrib-uglify": "^2.2.1"
+  }
+}
