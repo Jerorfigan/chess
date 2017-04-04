@@ -15,6 +15,10 @@ var BoardManager = function(){
 	console.log(this.board2piece);
 };
 
+BoardManager.prototype.getState = function(){
+	return this.board2piece;
+};
+
 module.exports = BoardManager;
 
 function initPiece2Board(){
