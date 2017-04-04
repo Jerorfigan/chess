@@ -14,7 +14,7 @@ var settings = {
 	boardSqrBorderSize: 5,                 // in px
 	boardSqrBorderColor: 0x000000,
 	boardSqrWhiteColor: 0xFFFFFF,
-	boardSqrBlackColor: 0x444444
+	boardSqrBlackColor: 0x666666
 
 };
 

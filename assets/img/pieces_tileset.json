@@ -1,0 +1,120 @@
+{"frames": {
+
+"black_bishop.png":
+{
+	"frame": {"x":0,"y":0,"w":106,"h":107},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":106,"h":107},
+	"sourceSize": {"w":106,"h":107},
+	"pivot": {"x":0.5,"y":0.5}
+},
+"black_king.png":
+{
+	"frame": {"x":106,"y":0,"w":106,"h":107},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":106,"h":107},
+	"sourceSize": {"w":106,"h":107},
+	"pivot": {"x":0.5,"y":0.5}
+},
+"black_knight.png":
+{
+	"frame": {"x":212,"y":0,"w":106,"h":107},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":106,"h":107},
+	"sourceSize": {"w":106,"h":107},
+	"pivot": {"x":0.5,"y":0.5}
+},
+"black_pawn.png":
+{
+	"frame": {"x":318,"y":0,"w":106,"h":107},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":106,"h":107},
+	"sourceSize": {"w":106,"h":107},
+	"pivot": {"x":0.5,"y":0.5}
+},
+"black_queen.png":
+{
+	"frame": {"x":424,"y":0,"w":106,"h":107},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":106,"h":107},
+	"sourceSize": {"w":106,"h":107},
+	"pivot": {"x":0.5,"y":0.5}
+},
+"black_rook.png":
+{
+	"frame": {"x":530,"y":0,"w":106,"h":107},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":106,"h":107},
+	"sourceSize": {"w":106,"h":107},
+	"pivot": {"x":0.5,"y":0.5}
+},
+"white_bishop.png":
+{
+	"frame": {"x":636,"y":0,"w":106,"h":107},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":106,"h":107},
+	"sourceSize": {"w":106,"h":107},
+	"pivot": {"x":0.5,"y":0.5}
+},
+"white_king.png":
+{
+	"frame": {"x":742,"y":0,"w":106,"h":107},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":106,"h":107},
+	"sourceSize": {"w":106,"h":107},
+	"pivot": {"x":0.5,"y":0.5}
+},
+"white_knight.png":
+{
+	"frame": {"x":848,"y":0,"w":106,"h":107},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":106,"h":107},
+	"sourceSize": {"w":106,"h":107},
+	"pivot": {"x":0.5,"y":0.5}
+},
+"white_pawn.png":
+{
+	"frame": {"x":954,"y":0,"w":106,"h":107},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":106,"h":107},
+	"sourceSize": {"w":106,"h":107},
+	"pivot": {"x":0.5,"y":0.5}
+},
+"white_queen.png":
+{
+	"frame": {"x":1060,"y":0,"w":106,"h":107},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":106,"h":107},
+	"sourceSize": {"w":106,"h":107},
+	"pivot": {"x":0.5,"y":0.5}
+},
+"white_rook.png":
+{
+	"frame": {"x":1166,"y":0,"w":106,"h":107},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":106,"h":107},
+	"sourceSize": {"w":106,"h":107},
+	"pivot": {"x":0.5,"y":0.5}
+}},
+"meta": {
+	"app": "http://www.codeandweb.com/texturepacker",
+	"version": "1.0",
+	"image": "pieces_tileset.png",
+	"format": "RGBA8888",
+	"size": {"w":1272,"h":107},
+	"scale": "1",
+	"smartupdate": "$TexturePacker:SmartUpdate:4fdcd47e0ae531d4d67c9aef09cba011:d583cc41ea754f6df94ac9ac9354d592:93fecd1f93b1452e187ad3ad00956d1e$"
+}
+}
