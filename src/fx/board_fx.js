@@ -1,13 +1,15 @@
 var R = require("../../lib/ramda.min.js");
 var settings = require("../settings.js");
 
-var BoardFX = function(renderer, stage){
-	this.renderer = renderer;
-	this.stage = stage;
+var BoardFX = function(){
+	// Constants
 	this.sqrWidth = (settings.canvasWidth - settings.boardSqrBorderSize) / 8;
 	this.file2numeral = {
 		"a": 1, "b": 2, "c": 3, "d": 4, "e": 5, "f": 6, "g": 7, "h": 8
 	};
+	this.numeral2file = {
+		"1": "a", "2": "b", "3": "c", "4": "d", "5": "e", "6": "f", "7": "g", "8": "h"
+	}
 };
 
 BoardFX.prototype.getCanvasLocFromSqrID = function(sqrID){
@@ -22,32 +24,48 @@ BoardFX.prototype.getSqrWidth = function(){
 	return this.sqrWidth;
 };
 
-BoardFX.prototype.draw = function(){
-	var isWhite = false;
-	for(var row = 0; row <= 7; row++){
-		isWhite = !isWhite;
-		for(var col = 0; col <= 7; col++){
-			var sqr = new PIXI.Graphics(),
-				sqrBorderColor = settings.boardSqrBorderColor,
-				sqrBorderSize = settings.boardSqrBorderSize,
-				whiteSqrFillColor = settings.boardSqrWhiteColor,
-				blackSqrFillColor = settings.boardSqrBlackColor,
-				sqrHeight = this.sqrWidth,
-				posX = col * this.sqrWidth + sqrBorderSize/2,
-				posY = row * sqrHeight + sqrBorderSize/2;
+BoardFX.prototype.build = function(){
+	var isWhite = false,
+		boardContainer = new PIXI.Container();
 
-			sqr.lineStyle(sqrBorderSize, sqrBorderColor, 1);
+	for(var row = 0; row <= 7; row++){
+		
+		isWhite = !isWhite;
+		
+		for(var col = 0; col <= 7; col++){
+			
+			var sqr = new PIXI.Graphics(),
+				posX = col * this.sqrWidth + settings.boardSqrBorderSize/2,
+				posY = row * this.sqrWidth + settings.boardSqrBorderSize/2;
+
+			// Draw square
+			sqr.lineStyle(settings.boardSqrBorderSize, settings.boardSqrBorderColor, 1);
 			if(isWhite){
-				sqr.beginFill(whiteSqrFillColor);
+				sqr.beginFill(settings.boardSqrWhiteColor);
 			}else{
-				sqr.beginFill(blackSqrFillColor);
+				sqr.beginFill(settings.boardSqrBlackColor);
 			}
-			sqr.drawRect(posX, posY, this.sqrWidth, sqrHeight);
+			sqr.drawRect(posX, posY, this.sqrWidth, this.sqrWidth);
 			sqr.endFill();
-			this.stage.addChild(sqr);
+
+			// Register click handler
+			sqr.interactive = true;
+			sqr.chessSqrCol = col;
+			sqr.chessSqrRow = row;
+			var thisObj = this;
+			sqr.on("pointerdown", function(e){
+				sqrID = thisObj.numeral2file[e.currentTarget.chessSqrCol + 1] + (8 - e.currentTarget.chessSqrRow);
+				console.log("Sqr " + sqrID + " clicked.");
+			});
+
+			// Add to parent container
+			boardContainer.addChild(sqr);
+
+			// Toggle isWhite flag
 			isWhite = !isWhite;
 		}
 	}
+	return boardContainer;
 };
 
 module.exports = BoardFX;

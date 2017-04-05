@@ -6,16 +6,17 @@ var FX = function(){
 	// Init PIXI renderer and root container, aka stage
 	this.renderer = PIXI.autoDetectRenderer(settings.canvasWidth, settings.canvasHeight);
 	this.stage = new PIXI.Container();
-	
-	// Init flags
-	this.flags = {idle: false, allResourcesLoaded: false};
-	
-	// Init FX sub-managers
-	this.boardFX = new BoardFX(this.renderer, this.stage);
-	this.pieceFX = new PieceFX(this.renderer, this.stage, this.boardFX);
+	this.renderer.render(this.stage);
 
 	// Add renderer canvas to HTML view
 	document.body.appendChild(this.renderer.view);
+
+	// Init flags
+	this.flags = {idle: false, allResourcesLoaded: false};
+	
+	// Graphics objects
+	this.board = null;
+	this.piecies = null;
 
 	// Load graphics/sound resources
 	loadResources.call(this);
@@ -25,18 +26,23 @@ FX.prototype.getFlags = function(){
 	return this.flags;
 };
 
-FX.prototype.draw = function(gameState, flags){
-	var entitiesDrawnCnt = 0;
-
-	// Only re-draw board when we're told
-	if(flags.drawBoard){
-		this.boardFX.draw();
-		this.pieceFX.drawAllPiecesFromBoardState(gameState.boardState);
-		entitiesDrawnCnt++;
+FX.prototype.update = function(gameState){
+	// Create board if it doesn't exist
+	if(!this.board){
+		var boardFX = new BoardFX();
+		this.board = boardFX.build();
+		this.stage.addChild(this.board);
+		this.renderer.render(this.stage);
 	}
 
-	if(entitiesDrawnCnt > 0){
+	// Create pieces if they don't already exist and we have board state
+	if(!this.pieces && !!gameState.boardState){
+		var pieceFX = new PieceFX();
+		this.pieces = pieceFX.buildPieces(gameState.boardState);
+		this.stage.addChild(this.pieces);
 		this.renderer.render(this.stage);
+	}else{
+		// Update pieces if the logic board state doesn't match the graphical board state 
 	}
 };
 

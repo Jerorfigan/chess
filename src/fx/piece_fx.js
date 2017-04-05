@@ -1,9 +1,7 @@
 var R = require("../../lib/ramda.min.js");
+var BoardFX = require("./board_fx.js");
 
-var PieceFX = function(renderer, stage, boardFX){
-	this.renderer = renderer;
-	this.stage = stage;
-	this.boardFX = boardFX;
+var PieceFX = function(){
 	this.pieceID2TextureID = {
 		"WK": "white_king.png",
 		"WQ": "white_queen.png",
@@ -40,13 +38,16 @@ var PieceFX = function(renderer, stage, boardFX){
 	};
 };
 
-PieceFX.prototype.drawAllPiecesFromBoardState = function(boardState){
+PieceFX.prototype.buildPieces = function(boardState){
 	var pieceTextures = PIXI.loader.resources["assets/img/pieces_tileset.json"].textures,
+		piecesContainer = new PIXI.Container(),
+		boardFX = new BoardFX(),
 		thisObj = this;
+
 	R.forEachObjIndexed(function(pieceID, sqrID){
 		var pieceSprite = new PIXI.Sprite(pieceTextures[thisObj.pieceID2TextureID[pieceID]]),
-			canvasLoc = thisObj.boardFX.getCanvasLocFromSqrID(sqrID),
-			sqrWidth = thisObj.boardFX.getSqrWidth();
+			canvasLoc = boardFX.getCanvasLocFromSqrID(sqrID),
+			sqrWidth = boardFX.getSqrWidth();
 		
 		// Scale sprite to fit in board square
 		pieceSprite.width = sqrWidth;
@@ -58,8 +59,10 @@ PieceFX.prototype.drawAllPiecesFromBoardState = function(boardState){
 		pieceSprite.x = canvasLoc.x;
 		pieceSprite.y = canvasLoc.y;
 
-		thisObj.stage.addChild(pieceSprite);
+		piecesContainer.addChild(pieceSprite);
 	}, boardState);
+
+	return piecesContainer;
 };
 
 module.exports = PieceFX;

@@ -28,7 +28,7 @@ window.onload = function(){
         Driver.prototype.loop = function (now) {
             if(now - this.lastUpdate > settings.mspf){
                 this.gameManager.updateGameState();
-                this.gameManager.drawGameState();
+                this.gameManager.updateGameGraphics();
                 this.lastUpdate = now;
             }
 

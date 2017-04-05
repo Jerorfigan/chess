@@ -15,9 +15,6 @@ var GameManager = function(){
 
 	// Init graphics
 	this.fx = new FX();
-
-	// Init game manager flags
-	this.fxFlags = {drawBoard: true};
 };
 
 GameManager.prototype.updateGameState = function(){
@@ -26,22 +23,18 @@ GameManager.prototype.updateGameState = function(){
 		if(this.isPlayerTurn){
 			if(this.playerManager.hasTakenTurn()){
 				this.isPlayerTurn = false;
-				this.fxFlags.drawBoard = true;
 			}
 		}else{
 			this.aiManager.takeTurn();
 			this.isPlayerTurn = true;
-			this.fxFlags.drawBoard = true;
 		}
 	}
 };
 
-GameManager.prototype.drawGameState = function(){
-	// Only draw game state when graphics is fully loaded (not busy loading images/other resource files)
+GameManager.prototype.updateGameGraphics = function(){
+	// Only update game graphics once graphics is fully loaded (not busy loading images/other resource files)
 	if(this.fx.getFlags().allResourcesLoaded){
-		// Tell graphics to draw board on first call, and only when it changes on subsequent calls
-		this.fx.draw(this.gameState, this.fxFlags);
-		this.fxFlags.drawBoard = false;
+		this.fx.update(this.gameState);
 	}
 };
 
