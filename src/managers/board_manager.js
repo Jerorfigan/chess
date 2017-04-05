@@ -21,9 +21,14 @@ var BoardManager = function(gameState){
 	gameEvent.fire("BoardSetup", {pieces: this.board2piece});
 };
 
-BoardManager.prototype.isValidMove = function(){
-	// TODO
-	return true;
+BoardManager.prototype.isValidMove = function(fromSqrID, toSqrID){
+	var pieceID = this.board2piece[fromSqrID],
+		destPieceID = this.board2piece[toSqrID],
+		toSqrIsEmpty = destPieceID == null ? true : false,
+		toSqrContainsOpponentPiece = destPieceID != null && destPieceID.charAt(0) != pieceID.charAt(0) ? true : false,
+		validMoves = getValidMoves(pieceID, fromSqrID);
+
+	return R.contains(toSqrID, validMoves) && (toSqrIsEmpty || toSqrContainsOpponentPiece);
 };
 
 BoardManager.prototype.movePiece = function(sourceSqrID, targetSqrID){
@@ -73,4 +78,98 @@ function initBoard2Piece(){
 	R.forEachObjIndexed(function(startPos, pieceID){
 		thisObj.board2piece[startPos] = pieceID;
 	}, this.pieceStartPos);
+}
+
+function getValidMoves(pieceID, sqrID){
+	var validMoves = [],
+		offsets = [],
+		fileNumeral = sqrID.charCodeAt(0) - 96, // 1 thru 8 corresponding to a thru h
+		rankNumeral = parseInt(sqrID.charAt(1));
+
+	function addRankAndFileStrafeOffsets(offsets){
+		// Build offets for strafing across a given rank
+		for(var fileOffset = (-fileNumeral + 1); fileOffset <= (8 - fileNumeral); fileOffset++){
+			if(fileOffset == 0) continue;
+			offsets.push({fileOffset: fileOffset, rankOffset: 0});
+		}
+
+		// Build offsets for strafing across a given file
+		for(var rankOffset = (-rankNumeral + 1); rankOffset <= (8 - rankNumeral); rankOffset++){
+			if(rankOffset == 0) continue;
+			offsets.push({fileOffset: 0, rankOffset: rankOffset});
+		}
+	}
+
+	function addDiagonalStrafeOffsets(offsets){
+		// Build offsets for strafing the diagonals
+		var directions = ["NW", "NE", "SW", "SE"];
+		for(var i = 0; i < directions.length; i++){
+			var dir = directions[i],
+				fileOffset = dir == "NW" || dir == "SW" ? 1 : -1,
+				rankOffset = dir == "NW" || dir == "NE" ? 1 : -1;
+			while(
+				(fileOffset + fileNumeral) >= 1 &&
+				(fileOffset + fileNumeral) <= 8 && 
+				(rankOffset + rankNumeral)   >= 1 &&
+				(rankOffset + rankNumeral)   <= 8
+			)
+			{
+				offsets.push({fileOffset: fileOffset, rankOffset: rankOffset});
+				dir == "NW" || dir == "SW" ? fileOffset++ : fileOffset--;
+				dir == "NW" || dir == "NE" ? rankOffset++ : rankOffset--;
+			}
+		}
+	} 
+
+	switch(pieceID.charAt(1)){
+		case "K":
+			for(var fileOffset = fileNumeral > 1 ? -1 : 0; fileOffset <= (fileNumeral < 8 ? 1 : 0); fileOffset++){
+				for(var rankOffset = rankNumeral > 1 ? -1 : 0; rankOffset <= (rankNumeral < 8 ? 1 : 0); rankOffset++){
+					if(fileOffset == 0 && rankOffset == 0) continue;
+					offsets.push({fileOffset: fileOffset, rankOffset: rankOffset});
+				}
+			}
+		break;
+		case "Q":
+			addRankAndFileStrafeOffsets(offsets);
+			addDiagonalStrafeOffsets(offsets);
+		break;
+		case "B":
+			addDiagonalStrafeOffsets(offsets);
+		break;
+		case "N":
+			fileNumeral > 1 && rankNumeral < 7 ? offsets.push({fileOffset: -1, rankOffset: 2}) : 0;
+			fileNumeral < 8 && rankNumeral < 7 ? offsets.push({fileOffset: 1, rankOffset: 2}) : 0;
+			fileNumeral > 2 && rankNumeral < 8 ? offsets.push({fileOffset: -2, rankOffset: 1}) : 0;
+			fileNumeral > 2 && rankNumeral > 1 ? offsets.push({fileOffset: -2, rankOffset: -1}) : 0;
+			fileNumeral > 1 && rankNumeral > 2 ? offsets.push({fileOffset: -1, rankOffset: -2}) : 0;
+			fileNumeral < 8 && rankNumeral > 2 ? offsets.push({fileOffset: 1, rankOffset: -2}) : 0;
+			fileNumeral < 7 && rankNumeral < 8 ? offsets.push({fileOffset: 2, rankOffset: 1}) : 0;
+			fileNumeral < 7 && rankNumeral > 1 ? offsets.push({fileOffset: 2, rankOffset: -1}) : 0;
+		break;
+		case "R":
+			addRankAndFileStrafeOffsets(offsets);
+		break;
+		case "P":
+			if(pieceID.charAt(0) == "W"){
+				offsets.push({fileOffset: 0, rankOffset: 1});
+				if(rankNumeral == 2){
+					offsets.push({fileOffset: 0, rankOffset: 2});
+				}
+			}else{
+				offsets.push({fileOffset: 0, rankOffset: -1});
+				if(rankNumeral == 7){
+					offsets.push({fileOffset: 0, rankOffset: -2});
+				}
+			}
+			// TODO add pawn attack moves and en passant
+		break;
+	}
+
+	R.forEach(function(offset){
+		var validMoveNumeric = {fileNumeral: offset.fileOffset + fileNumeral, rankNumeral: offset.rankOffset + rankNumeral};
+		validMoves.push(String.fromCharCode(validMoveNumeric.fileNumeral + 96) + validMoveNumeric.rankNumeral);
+	}, offsets);
+
+	return validMoves;
 }
