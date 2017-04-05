@@ -1,10 +1,16 @@
-var AIManager = function(gameState, boardManager){
-	this.gameState = gameState;
-	this.boardManager = boardManager;
-};
+var gameEvent = require("../game_event.js");
 
-AIManager.prototype.takeTurn = function(){
-	// TODO	
+var AIManager = function(boardManager){
+	this.boardManager = boardManager;
+
+	// Register for events
+	gameEvent.subscribe("PlayerMovedPiece", onPlayerMovedPiece, this);
 };
 
 module.exports = AIManager;
+
+function onPlayerMovedPiece(){
+	// Take turn
+	// TODO
+	gameEvent.fire("AIMovedPiece");
+}

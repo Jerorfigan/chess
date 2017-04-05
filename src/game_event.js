@@ -22,6 +22,11 @@ var gameEvent = {
 	}
 };
 
+gameEvent.create("GameStarted");
+gameEvent.create("BoardSetup");
+gameEvent.create("BoardUpdated");
 gameEvent.create("BoardSquareSelected");
+gameEvent.create("PlayerMovedPiece");
+gameEvent.create("AIMovedPiece");
 
 module.exports = gameEvent;

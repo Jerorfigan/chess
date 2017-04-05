@@ -1,8 +1,9 @@
 var R = require("../../lib/ramda.min.js");
+var gameEvent = require("../game_event.js");
 
-var BoardManager = function(gameState){
+var BoardManager = function(gameState){	
 	this.gameState = gameState;
-	
+
 	// Constants
 	this.pieceStartPos = {
 		WK: "e1", WQ: "d1", WBc: "c1", WBf: "f1",  WNb: "b1", WNg: "g1", WRa: "a1", WRh: "h1", WPa: "a2", WPb: "b2", WPc: "c2", WPd: "d2", WPe: "e2", WPf: "f2", WPg: "g2", WPh: "h2",
@@ -17,8 +18,7 @@ var BoardManager = function(gameState){
 	initPiece2Board.call(this);
 	initBoard2Piece.call(this);
 
-	// Update gameState.boardState
-	this.gameState.boardState = this.board2piece;
+	gameEvent.fire("BoardSetup", {pieces: this.board2piece});
 };
 
 BoardManager.prototype.isValidMove = function(){
@@ -45,8 +45,7 @@ BoardManager.prototype.movePiece = function(sourceSqrID, targetSqrID){
 	movingPiece.rank = targetSqrID.charAt(1);
 	movingPiece.file = targetSqrID.charAt(0);
 
-	console.log("Board state after move: ");
-	console.log(this.gameState.boardState);
+	gameEvent.fire("BoardUpdated", {pieces: this.board2piece});
 };
 
 BoardManager.prototype.squareHasPlayerPiece = function(sqrID, player){

@@ -6,7 +6,7 @@ var gulpbrowserify = require('gulp-browser');
 var del = require('del');
  
 var paths = {
-  scripts: ['src/*.js','src/managers/*.js'],
+  scripts: ['src/*.js','src/managers/*.js','src/fx/*.js'],
   driver: ['src/chess.js']
 };
  

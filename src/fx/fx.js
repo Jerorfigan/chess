@@ -1,56 +1,56 @@
 var BoardFX = require("./board_fx.js");
 var PieceFX = require("./piece_fx.js");
 var settings = require("../settings.js");
+var gameEvent = require("../game_event.js");
 
-var FX = function(){
+var FX = function(onGraphicsLoadedCallback, context){
 	// Init PIXI renderer and root container, aka stage
 	this.renderer = PIXI.autoDetectRenderer(settings.canvasWidth, settings.canvasHeight);
 	this.stage = new PIXI.Container();
-	this.renderer.render(this.stage);
 
 	// Add renderer canvas to HTML view
 	document.body.appendChild(this.renderer.view);
-
-	// Init flags
-	this.flags = {idle: false, allResourcesLoaded: false};
 	
+	// Graphics managers
+	this.boardFX = new BoardFX();
+	this.pieceFX = new PieceFX(); 
+
 	// Graphics objects
 	this.board = null;
 	this.piecies = null;
 
-	// Load graphics/sound resources
-	loadResources.call(this);
-};
+	// Load graphics resources
+	loadResources.call(this, onGraphicsLoadedCallback, context);
 
-FX.prototype.getFlags = function(){
-	return this.flags;
-};
-
-FX.prototype.update = function(gameState){
-	// Create board if it doesn't exist
-	if(!this.board){
-		var boardFX = new BoardFX();
-		this.board = boardFX.build();
-		this.stage.addChild(this.board);
-		this.renderer.render(this.stage);
-	}
-
-	// Create pieces if they don't already exist and we have board state
-	if(!this.pieces && !!gameState.boardState){
-		var pieceFX = new PieceFX();
-		this.pieces = pieceFX.buildPieces(gameState.boardState);
-		this.stage.addChild(this.pieces);
-		this.renderer.render(this.stage);
-	}else{
-		// Update pieces if the logic board state doesn't match the graphical board state 
-	}
+	// Register for events
+	gameEvent.subscribe("BoardSetup", onBoardSetup, this);
+	gameEvent.subscribe("BoardUpdated", onBoardUpdated, this);
 };
 
 module.exports = FX;
 
-function loadResources(){
-	var thisObj = this;
+function loadResources(onGraphicsLoadedCallback, context){
 	PIXI.loader
 	  	.add("assets/img/pieces_tileset.json")
-	 	.load(function(){ thisObj.flags.idle = true; thisObj.flags.allResourcesLoaded = true; });
+	 	.load(function(){ 
+	 		onGraphicsLoadedCallback.call(context);
+	 	});
+}
+
+function onBoardSetup(eventName, data){
+	this.board = this.boardFX.build();
+	this.stage.addChild(this.board);
+
+	this.pieces = this.pieceFX.buildPieces(data.pieces);
+	this.stage.addChild(this.pieces);
+
+	this.renderer.render(this.stage);
+}
+
+function onBoardUpdated(eventName, data){
+	this.stage.removeChild(this.pieces);
+	this.pieces = this.pieceFX.buildPieces(data.pieces);
+	this.stage.addChild(this.pieces);
+
+	this.renderer.render(this.stage);
 }
