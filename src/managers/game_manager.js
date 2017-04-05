@@ -20,13 +20,13 @@ var GameManager = function(){
 GameManager.prototype.updateGameState = function(){
 	// Only update game state when graphics is idle (not busy loading images or animating)
 	if(this.fx.getFlags().idle){
-		if(this.isPlayerTurn){
+		if(this.gameState.isPlayerTurn){
 			if(this.playerManager.hasTakenTurn()){
-				this.isPlayerTurn = false;
+				this.gameState.isPlayerTurn = false;
 			}
 		}else{
 			this.aiManager.takeTurn();
-			this.isPlayerTurn = true;
+			this.gameState.isPlayerTurn = true;
 		}
 	}
 };

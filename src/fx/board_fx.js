@@ -1,5 +1,5 @@
-var R = require("../../lib/ramda.min.js");
 var settings = require("../settings.js");
+var gameEvent = require("../game_event.js");
 
 var BoardFX = function(){
 	// Constants
@@ -55,7 +55,7 @@ BoardFX.prototype.build = function(){
 			var thisObj = this;
 			sqr.on("pointerdown", function(e){
 				sqrID = thisObj.numeral2file[e.currentTarget.chessSqrCol + 1] + (8 - e.currentTarget.chessSqrRow);
-				console.log("Sqr " + sqrID + " clicked.");
+				gameEvent.fire("BoardSquareSelected", {sqrID: sqrID});
 			});
 
 			// Add to parent container
