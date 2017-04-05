@@ -23,7 +23,7 @@ gulp.task('scripts', ['clean'], function() {
   return gulp.src(paths.driver)
     //.pipe(sourcemaps.init())
       .pipe(gulpbrowserify.browserify())
-      .pipe(uglify())
+      //.pipe(uglify())
       .pipe(concat('chess.min.js'))
     //.pipe(sourcemaps.write())
     .pipe(gulp.dest('build'));

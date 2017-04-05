@@ -6,7 +6,7 @@ var AIManager = require("./ai_manager.js");
 
 var GameManager = function(){
 	// Init game state
-	this.gameState = {playerColor: "white", isPlayerTurn: true, boardState: null};
+	this.gameState = {playerColor: "W", isPlayerTurn: true, boardState: null};
 
 	// Init managers
 	this.boardManager = new BoardManager(this.gameState);

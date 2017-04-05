@@ -21,8 +21,36 @@ var BoardManager = function(gameState){
 	this.gameState.boardState = this.board2piece;
 };
 
-BoardManager.prototype.getState = function(){
-	return this.board2piece;
+BoardManager.prototype.isValidMove = function(){
+	// TODO
+	return true;
+};
+
+BoardManager.prototype.movePiece = function(sourceSqrID, targetSqrID){
+	if(!this.board2piece[sourceSqrID]) throw "Attempt to move piece from empty square";
+
+	console.log("Moving " + this.board2piece[sourceSqrID] + " from " + sourceSqrID + " to " + targetSqrID);
+
+	// Update board2piece map
+	var movingPieceID = this.board2piece[sourceSqrID];
+	delete this.board2piece[sourceSqrID];
+	if(this.board2piece[targetSqrID]){
+		// Capturing
+		// TODO
+	}else{
+		this.board2piece[targetSqrID] = movingPieceID;
+	}
+	// Update piece2board map
+	var movingPiece = this.piece2board[movingPieceID];
+	movingPiece.rank = targetSqrID.charAt(1);
+	movingPiece.file = targetSqrID.charAt(0);
+
+	console.log("Board state after move: ");
+	console.log(this.gameState.boardState);
+};
+
+BoardManager.prototype.squareHasPlayerPiece = function(sqrID, player){
+	return this.board2piece[sqrID] && this.board2piece[sqrID].charAt(0) == player; 
 };
 
 module.exports = BoardManager;
