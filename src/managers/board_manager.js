@@ -26,7 +26,7 @@ BoardManager.prototype.isValidMove = function(fromSqrID, toSqrID){
 		destPieceID = this.board2piece[toSqrID],
 		toSqrIsEmpty = destPieceID == null ? true : false,
 		toSqrContainsOpponentPiece = destPieceID != null && destPieceID.charAt(0) != pieceID.charAt(0) ? true : false,
-		validMoves = getValidMoves(pieceID, fromSqrID);
+		validMoves = getValidMoves.call(this, pieceID, fromSqrID);
 
 	return R.contains(toSqrID, validMoves) && (toSqrIsEmpty || toSqrContainsOpponentPiece);
 };
@@ -86,27 +86,45 @@ function getValidMoves(pieceID, sqrID){
 		fileNumeral = sqrID.charCodeAt(0) - 96, // 1 thru 8 corresponding to a thru h
 		rankNumeral = parseInt(sqrID.charAt(1));
 
-	function addRankAndFileStrafeOffsets(offsets){
-		// Build offets for strafing across a given rank
-		for(var fileOffset = (-fileNumeral + 1); fileOffset <= (8 - fileNumeral); fileOffset++){
-			if(fileOffset == 0) continue;
-			offsets.push({fileOffset: fileOffset, rankOffset: 0});
-		}
-
-		// Build offsets for strafing across a given file
-		for(var rankOffset = (-rankNumeral + 1); rankOffset <= (8 - rankNumeral); rankOffset++){
-			if(rankOffset == 0) continue;
-			offsets.push({fileOffset: 0, rankOffset: rankOffset});
-		}
-	}
-
-	function addDiagonalStrafeOffsets(offsets){
+	function addStrafeOffsets(offsets, diagonal){
 		// Build offsets for strafing the diagonals
-		var directions = ["NW", "NE", "SW", "SE"];
+		var directions = diagonal ? ["NW", "NE", "SW", "SE"] : ["N", "W", "S", "E"];
 		for(var i = 0; i < directions.length; i++){
-			var dir = directions[i],
-				fileOffset = dir == "NW" || dir == "SW" ? 1 : -1,
-				rankOffset = dir == "NW" || dir == "NE" ? 1 : -1;
+			var dir = directions[i];
+			switch(dir){
+				case "NW":
+					fileOffset = -1;
+					rankOffset = 1;
+				break;
+				case "SW":
+					fileOffset = -1;
+					rankOffset = -1;
+				break;
+				case "NE":
+					fileOffset = 1;
+					rankOffset = 1;
+				break;
+				case "SE":
+					fileOffset = 1
+					rankOffset = -1
+				break;
+				case "N":
+					fileOffset = 0;
+					rankOffset = 1;
+				break;
+				case "S":
+					fileOffset = 0;
+					rankOffset = -1;
+				break;
+				case "W":
+					fileOffset = -1;
+					rankOffset = 0;
+				break;
+				case "E":
+					fileOffset = 1;
+					rankOffset = 0;
+				break;
+			}
 			while(
 				(fileOffset + fileNumeral) >= 1 &&
 				(fileOffset + fileNumeral) <= 8 && 
@@ -114,12 +132,37 @@ function getValidMoves(pieceID, sqrID){
 				(rankOffset + rankNumeral)   <= 8
 			)
 			{
-				offsets.push({fileOffset: fileOffset, rankOffset: rankOffset});
-				dir == "NW" || dir == "SW" ? fileOffset++ : fileOffset--;
-				dir == "NW" || dir == "NE" ? rankOffset++ : rankOffset--;
+				var offset = {fileOffset: fileOffset, rankOffset: rankOffset};
+				offsets.push(offset);
+				// If board sqr is occupied, then we are blocked from moving further in this
+				// direction
+				if(
+					!this.board2piece[
+						num2algebraic(
+							addOffsetToNumSqrID(offset, fileNumeral, rankNumeral)
+						)
+					]
+				){
+					dir == "NW" || dir == "SW" || dir == "W" ? fileOffset-- : dir != "N" && dir != "S" ? fileOffset++ : 0;
+					dir == "NW" || dir == "NE" || dir == "N" ? rankOffset++ : dir != "W" && dir != "E" ? rankOffset-- : 0;
+				}else{
+					break;
+				}
 			}
 		}
 	} 
+
+	function num2algebraic(numericSqrID){
+		return String.fromCharCode(numericSqrID.fileNumeral + 96) + numericSqrID.rankNumeral;
+	}
+
+	function addOffsetToNumSqrID(offset, fileNumeral, rankNumeral){
+		if(typeof fileNumeral == "object"){
+			return {fileNumeral: offset.fileOffset + fileNumeral.fileNumeral, rankNumeral: offset.rankOffset + fileNumeral.rankNumeral};
+		}else{
+			return {fileNumeral: offset.fileOffset + fileNumeral, rankNumeral: offset.rankOffset + rankNumeral};
+		}
+	}
 
 	switch(pieceID.charAt(1)){
 		case "K":
@@ -131,11 +174,11 @@ function getValidMoves(pieceID, sqrID){
 			}
 		break;
 		case "Q":
-			addRankAndFileStrafeOffsets(offsets);
-			addDiagonalStrafeOffsets(offsets);
+			addStrafeOffsets.call(this, offsets);
+			addStrafeOffsets.call(this, offsets, true);
 		break;
 		case "B":
-			addDiagonalStrafeOffsets(offsets);
+			addStrafeOffsets.call(this, offsets, true);
 		break;
 		case "N":
 			fileNumeral > 1 && rankNumeral < 7 ? offsets.push({fileOffset: -1, rankOffset: 2}) : 0;
@@ -148,7 +191,7 @@ function getValidMoves(pieceID, sqrID){
 			fileNumeral < 7 && rankNumeral > 1 ? offsets.push({fileOffset: 2, rankOffset: -1}) : 0;
 		break;
 		case "R":
-			addRankAndFileStrafeOffsets(offsets);
+			addStrafeOffsets.call(this, offsets);
 		break;
 		case "P":
 			if(pieceID.charAt(0) == "W"){
@@ -167,8 +210,11 @@ function getValidMoves(pieceID, sqrID){
 	}
 
 	R.forEach(function(offset){
-		var validMoveNumeric = {fileNumeral: offset.fileOffset + fileNumeral, rankNumeral: offset.rankOffset + rankNumeral};
-		validMoves.push(String.fromCharCode(validMoveNumeric.fileNumeral + 96) + validMoveNumeric.rankNumeral);
+		validMoves.push(
+			num2algebraic(
+				addOffsetToNumSqrID(offset, fileNumeral, rankNumeral)
+			)
+		);
 	}, offsets);
 
 	return validMoves;
