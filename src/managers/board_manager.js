@@ -50,8 +50,8 @@ BoardManager.prototype.movePiece = function(sourceSqrID, targetSqrID){
 	gameEvent.fire("BoardUpdated", {pieces: this.board2piece});
 };
 
-BoardManager.prototype.squareHasPlayerPiece = function(sqrID, player){
-	return this.board2piece[sqrID] && this.board2piece[sqrID].charAt(0) == player; 
+BoardManager.prototype.squareHasPlayerPiece = function(sqrID){
+	return !!this.board2piece[sqrID] && this.board2piece[sqrID].charAt(0) == settings.playerColor; 
 };
 
 module.exports = BoardManager;

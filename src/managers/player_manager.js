@@ -26,8 +26,14 @@ function onPlayerSelectedSquare(eventName, data){
 			// ...That is different than this newly selected square, then interpret this as a move to
 			// the newly selected square with the piece at the last square 
 			if(this.lastSelectedSquareWithOwnedPiece != sqrID){
+				// If player owns piece at square, interpret this as changing which piece is to be moved
+				if(this.boardManager.squareHasPlayerPiece(sqrID)){
+					this.lastSelectedSquareWithOwnedPiece = sqrID;
+					console.log("Player has selected square: " + sqrID);
+					gameEvent.fire("PieceSelected", {sqrID: sqrID});
+				}
 				// Validate the move
-				if(this.boardManager.isValidMove(this.lastSelectedSquareWithOwnedPiece, sqrID)){
+				else if(this.boardManager.isValidMove(this.lastSelectedSquareWithOwnedPiece, sqrID)){
 					this.boardManager.movePiece(this.lastSelectedSquareWithOwnedPiece, sqrID);
 					this.lastSelectedSquareWithOwnedPiece = null;
 					this.isPlayerTurn = false;
@@ -39,10 +45,11 @@ function onPlayerSelectedSquare(eventName, data){
 		}
 		// Else the player is in the process of selecting a square with owned piece, so check that there's 
 		// a piece belonging to the player on this square
-		else if(this.boardManager.squareHasPlayerPiece(sqrID, this.playerColor)){
+		else if(this.boardManager.squareHasPlayerPiece(sqrID)){
 			// Record their selected square with owned piece in anticipation of move
 			this.lastSelectedSquareWithOwnedPiece = sqrID;
 			console.log("Player has selected square: " + sqrID);
+			gameEvent.fire("PieceSelected", {sqrID: sqrID});
 		}else{
 			console.log("No owned piece at this square.");
 		}

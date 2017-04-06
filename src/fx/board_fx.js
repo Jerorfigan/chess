@@ -1,7 +1,14 @@
 var settings = require("../settings.js");
 var gameEvent = require("../game_event.js");
 
-var BoardFX = function(){
+var BoardFX = function(renderer, stage){
+	this.renderer = renderer;
+	this.stage = stage;
+
+	// Graphics objects
+	this.boardContainer = null;
+	this.selectedSqrHighlight = null;
+
 	// Constants
 	this.sqrWidth = (settings.canvasWidth - settings.boardSqrBorderSize) / 8;
 	this.file2numeral = {
@@ -10,6 +17,13 @@ var BoardFX = function(){
 	this.numeral2file = {
 		"1": "a", "2": "b", "3": "c", "4": "d", "5": "e", "6": "f", "7": "g", "8": "h"
 	}
+	this.sqrGraphicsByID = {};
+
+	// Register for events
+	gameEvent.subscribe("PieceSelected", onPieceSelected, this);
+	gameEvent.subscribe("BoardSetup", onBoardSetup, this);
+	gameEvent.subscribe("PlayerMovedPiece", onPieceMoved, this);
+	gameEvent.subscribe("AIMovedPiece", onPieceMoved, this);
 };
 
 BoardFX.prototype.getCanvasLocFromSqrID = function(sqrID){
@@ -24,9 +38,15 @@ BoardFX.prototype.getSqrWidth = function(){
 	return this.sqrWidth;
 };
 
-BoardFX.prototype.build = function(){
-	var isWhite = false,
-		boardContainer = new PIXI.Container();
+BoardFX.prototype.renderBoard = function(){
+	if(this.boardContainer){
+		this.stage.removeChild(this.boardContainer);
+		this.boardContainer.destroy();
+	}
+
+	var isWhite = false;
+
+	this.boardContainer = new PIXI.Container();
 
 	for(var row = 0; row <= 7; row++){
 		
@@ -59,13 +79,49 @@ BoardFX.prototype.build = function(){
 			});
 
 			// Add to parent container
-			boardContainer.addChild(sqr);
+			this.boardContainer.addChild(sqr);
+
+			// Update sqrGraphicsByID map
+			this.sqrGraphicsByID[this.numeral2file[col + 1] + (8 - row)] = sqr;
 
 			// Toggle isWhite flag
 			isWhite = !isWhite;
 		}
 	}
-	return boardContainer;
+	
+	this.stage.addChild(this.boardContainer);
+	this.renderer.render(this.stage);
 };
 
 module.exports = BoardFX;
+
+function destroyHighlight(){
+	if(this.selectedSqrHighlight){
+		this.stage.removeChild(this.selectedSqrHighlight);
+		this.renderer.render(this.stage);
+		this.selectedSqrHighlight.destroy();
+		this.selectedSqrHighlight = null;
+	}
+}
+
+function onPieceMoved(eventName, data){
+	destroyHighlight.call(this);
+}
+
+function onPieceSelected(eventName, data){
+	destroyHighlight.call(this);
+	var sqrToHighlight = this.sqrGraphicsByID[data.sqrID],
+		posX = sqrToHighlight.chessSqrCol * this.sqrWidth + settings.boardSqrBorderSize/2,
+		posY = sqrToHighlight.chessSqrRow * this.sqrWidth + settings.boardSqrBorderSize/2;
+
+	this.selectedSqrHighlight = new PIXI.Graphics();
+	this.selectedSqrHighlight.lineStyle(settings.boardSqrBorderSize, settings.boardSqrBorderColorHighlighted);
+	this.selectedSqrHighlight.drawRect(posX, posY, this.sqrWidth, this.sqrWidth);
+	
+	this.stage.addChild(this.selectedSqrHighlight);
+	this.renderer.render(this.stage);
+}
+
+function onBoardSetup(eventName, data){
+	this.renderBoard();
+}

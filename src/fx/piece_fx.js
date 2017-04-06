@@ -1,7 +1,11 @@
 var R = require("../../lib/ramda.min.js");
-var BoardFX = require("./board_fx.js");
+var gameEvent = require("../game_event.js");
 
-var PieceFX = function(){
+var PieceFX = function(renderer, stage, boardFX){
+	this.renderer = renderer;
+	this.stage = stage;
+
+	this.boardFX = boardFX;
 	this.pieceID2TextureID = {
 		"WK": "white_king.png",
 		"WQ": "white_queen.png",
@@ -36,13 +40,27 @@ var PieceFX = function(){
 		"BPg": "black_pawn.png",
 		"BPh": "black_pawn.png"
 	};
+
+	// Graphiccs objects
+	this.piecesContainer = null;
+
+	// Register for events
+	gameEvent.subscribe("BoardSetup", onBoardSetup, this);
+	gameEvent.subscribe("BoardUpdated", onBoardUpdated, this);
 };
 
-PieceFX.prototype.buildPieces = function(boardState){
+PieceFX.prototype.renderPieces = function(boardState){
+	if(this.piecesContainer){
+		this.stage.removeChild(this.piecesContainer);
+		this.piecesContainer.destroy();
+		this.piecesContainer = null;
+	}
+
 	var pieceTextures = PIXI.loader.resources["assets/img/pieces_tileset.json"].textures,
-		piecesContainer = new PIXI.Container(),
-		boardFX = new BoardFX(),
+		boardFX = this.boardFX,
 		thisObj = this;
+
+	this.piecesContainer = new PIXI.Container();
 
 	R.forEachObjIndexed(function(pieceID, sqrID){
 		var pieceSprite = new PIXI.Sprite(pieceTextures[thisObj.pieceID2TextureID[pieceID]]),
@@ -59,10 +77,19 @@ PieceFX.prototype.buildPieces = function(boardState){
 		pieceSprite.x = canvasLoc.x;
 		pieceSprite.y = canvasLoc.y;
 
-		piecesContainer.addChild(pieceSprite);
+		thisObj.piecesContainer.addChild(pieceSprite);
 	}, boardState);
 
-	return piecesContainer;
+	this.stage.addChild(this.piecesContainer);
+	this.renderer.render(this.stage);
 };
 
 module.exports = PieceFX;
+
+function onBoardSetup(eventName, data){
+	this.renderPieces(data.pieces);
+}
+
+function onBoardUpdated(eventName, data){
+	this.renderPieces(data.pieces);
+}

@@ -26,6 +26,7 @@ gameEvent.create("GameStarted");
 gameEvent.create("BoardSetup");
 gameEvent.create("BoardUpdated");
 gameEvent.create("BoardSquareSelected");
+gameEvent.create("PieceSelected");
 gameEvent.create("PlayerMovedPiece");
 gameEvent.create("AIMovedPiece");
 gameEvent.create("PieceCaptured");

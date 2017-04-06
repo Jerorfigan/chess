@@ -12,19 +12,11 @@ var FX = function(onGraphicsLoadedCallback, context){
 	document.body.appendChild(this.renderer.view);
 	
 	// Graphics managers
-	this.boardFX = new BoardFX();
-	this.pieceFX = new PieceFX(); 
-
-	// Graphics objects
-	this.board = null;
-	this.piecies = null;
+	this.boardFX = new BoardFX(this.renderer, this.stage);
+	this.pieceFX = new PieceFX(this.renderer, this.stage, this.boardFX);
 
 	// Load graphics resources
 	loadResources.call(this, onGraphicsLoadedCallback, context);
-
-	// Register for events
-	gameEvent.subscribe("BoardSetup", onBoardSetup, this);
-	gameEvent.subscribe("BoardUpdated", onBoardUpdated, this);
 };
 
 module.exports = FX;
@@ -35,22 +27,4 @@ function loadResources(onGraphicsLoadedCallback, context){
 	 	.load(function(){ 
 	 		onGraphicsLoadedCallback.call(context);
 	 	});
-}
-
-function onBoardSetup(eventName, data){
-	this.board = this.boardFX.build();
-	this.stage.addChild(this.board);
-
-	this.pieces = this.pieceFX.buildPieces(data.pieces);
-	this.stage.addChild(this.pieces);
-
-	this.renderer.render(this.stage);
-}
-
-function onBoardUpdated(eventName, data){
-	this.stage.removeChild(this.pieces);
-	this.pieces = this.pieceFX.buildPieces(data.pieces);
-	this.stage.addChild(this.pieces);
-
-	this.renderer.render(this.stage);
 }
