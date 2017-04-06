@@ -1,9 +1,8 @@
 var R = require("../../lib/ramda.min.js");
 var gameEvent = require("../game_event.js");
+var settings = require("../settings.js");
 
-var BoardManager = function(gameState){	
-	this.gameState = gameState;
-
+var BoardManager = function(){	
 	// Constants
 	this.pieceStartPos = {
 		WK: "e1", WQ: "d1", WBc: "c1", WBf: "f1",  WNb: "b1", WNg: "g1", WRa: "a1", WRh: "h1", WPa: "a2", WPb: "b2", WPc: "c2", WPd: "d2", WPe: "e2", WPf: "f2", WPg: "g2", WPh: "h2",
@@ -40,11 +39,9 @@ BoardManager.prototype.movePiece = function(sourceSqrID, targetSqrID){
 	var movingPieceID = this.board2piece[sourceSqrID];
 	delete this.board2piece[sourceSqrID];
 	if(this.board2piece[targetSqrID]){
-		// Capturing
-		// TODO
-	}else{
-		this.board2piece[targetSqrID] = movingPieceID;
+		gameEvent.fire("PieceCaptured", {capturedPieceID: this.board2piece[targetSqrID], sqrID: targetSqrID});
 	}
+	this.board2piece[targetSqrID] = movingPieceID;
 	// Update piece2board map
 	var movingPiece = this.piece2board[movingPieceID];
 	movingPiece.rank = targetSqrID.charAt(1);
@@ -83,6 +80,7 @@ function initBoard2Piece(){
 function getValidMoves(pieceID, sqrID){
 	var validMoves = [],
 		offsets = [],
+		board2piece = this.board2piece,
 		fileNumeral = sqrID.charCodeAt(0) - 96, // 1 thru 8 corresponding to a thru h
 		rankNumeral = parseInt(sqrID.charAt(1));
 
@@ -136,13 +134,7 @@ function getValidMoves(pieceID, sqrID){
 				offsets.push(offset);
 				// If board sqr is occupied, then we are blocked from moving further in this
 				// direction
-				if(
-					!this.board2piece[
-						num2algebraic(
-							addOffsetToNumSqrID(offset, fileNumeral, rankNumeral)
-						)
-					]
-				){
+				if(isSqrAtOffsetEmpty(offset)){
 					dir == "NW" || dir == "SW" || dir == "W" ? fileOffset-- : dir != "N" && dir != "S" ? fileOffset++ : 0;
 					dir == "NW" || dir == "NE" || dir == "N" ? rankOffset++ : dir != "W" && dir != "E" ? rankOffset-- : 0;
 				}else{
@@ -164,6 +156,21 @@ function getValidMoves(pieceID, sqrID){
 		}
 	}
 
+	function isSqrAtOffsetEmpty(offset){
+		return !board2piece[
+			num2algebraic(
+				addOffsetToNumSqrID(offset, fileNumeral, rankNumeral)
+			)
+		];
+	}
+
+	function sqrAtOffsetContainsOpponentPiece(offset){
+		var sqrID = num2algebraic(
+			addOffsetToNumSqrID(offset, fileNumeral, rankNumeral)
+		);
+		return !!board2piece[sqrID] && board2piece[sqrID].charAt(0) != settings.playerColor;
+	}
+
 	switch(pieceID.charAt(1)){
 		case "K":
 			for(var fileOffset = fileNumeral > 1 ? -1 : 0; fileOffset <= (fileNumeral < 8 ? 1 : 0); fileOffset++){
@@ -174,11 +181,11 @@ function getValidMoves(pieceID, sqrID){
 			}
 		break;
 		case "Q":
-			addStrafeOffsets.call(this, offsets);
-			addStrafeOffsets.call(this, offsets, true);
+			addStrafeOffsets(offsets);
+			addStrafeOffsets(offsets, true);
 		break;
 		case "B":
-			addStrafeOffsets.call(this, offsets, true);
+			addStrafeOffsets(offsets, true);
 		break;
 		case "N":
 			fileNumeral > 1 && rankNumeral < 7 ? offsets.push({fileOffset: -1, rankOffset: 2}) : 0;
@@ -191,21 +198,27 @@ function getValidMoves(pieceID, sqrID){
 			fileNumeral < 7 && rankNumeral > 1 ? offsets.push({fileOffset: 2, rankOffset: -1}) : 0;
 		break;
 		case "R":
-			addStrafeOffsets.call(this, offsets);
+			addStrafeOffsets(offsets);
 		break;
 		case "P":
-			if(pieceID.charAt(0) == "W"){
-				offsets.push({fileOffset: 0, rankOffset: 1});
-				if(rankNumeral == 2){
-					offsets.push({fileOffset: 0, rankOffset: 2});
-				}
-			}else{
-				offsets.push({fileOffset: 0, rankOffset: -1});
-				if(rankNumeral == 7){
-					offsets.push({fileOffset: 0, rankOffset: -2});
+			var player = pieceID.charAt(0);
+			var oneSqrForward = {fileOffset: 0, rankOffset: player == "W" ? 1 : -1};
+			if(isSqrAtOffsetEmpty(oneSqrForward)){
+				offsets.push(oneSqrForward);
+				var twoSqrsForward = {fileOffset: 0, rankOffset: player == "W" ? 2 : -2};
+				if(rankNumeral == (player == "W" ? 2 : 7) && isSqrAtOffsetEmpty(twoSqrsForward)){
+					offsets.push(twoSqrsForward);
 				}
 			}
-			// TODO add pawn attack moves and en passant
+			// Add attack moves
+			var attackOffsets = player == "W" ? 
+				[{fileOffset: -1, rankOffset: 1}, {fileOffset: 1, rankOffset: 1}] :
+				[{fileOffset: -1, rankOffset: -1}, {fileOffset: 1, rankOffset: -1}];
+			R.forEach(function(attackOffset){
+				if(sqrAtOffsetContainsOpponentPiece(attackOffset)){
+					offsets.push(attackOffset);
+				}
+			}, attackOffsets);
 		break;
 	}
 

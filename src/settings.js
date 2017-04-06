@@ -14,7 +14,11 @@ var settings = {
 	boardSqrBorderSize: 5,                 // in px
 	boardSqrBorderColor: 0x000000,
 	boardSqrWhiteColor: 0xFFFFFF,
-	boardSqrBlackColor: 0x666666
+	boardSqrBlackColor: 0x666666,
+
+	// Game settings
+
+	playerColor: "W"
 
 };
 

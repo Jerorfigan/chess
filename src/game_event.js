@@ -28,5 +28,6 @@ gameEvent.create("BoardUpdated");
 gameEvent.create("BoardSquareSelected");
 gameEvent.create("PlayerMovedPiece");
 gameEvent.create("AIMovedPiece");
+gameEvent.create("PieceCaptured");
 
 module.exports = gameEvent;
