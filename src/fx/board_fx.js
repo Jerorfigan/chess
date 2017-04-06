@@ -1,3 +1,4 @@
+var R = require("../../lib/ramda.min.js");
 var settings = require("../settings.js");
 var gameEvent = require("../game_event.js");
 
@@ -7,17 +8,10 @@ var BoardFX = function(renderer, stage){
 
 	// Graphics objects
 	this.boardContainer = null;
-	this.selectedSqrHighlight = null;
+	this.highlights = null;
 
 	// Constants
 	this.sqrWidth = (settings.canvasWidth - settings.boardSqrBorderSize) / 8;
-	this.file2numeral = {
-		"a": 1, "b": 2, "c": 3, "d": 4, "e": 5, "f": 6, "g": 7, "h": 8
-	};
-	this.numeral2file = {
-		"1": "a", "2": "b", "3": "c", "4": "d", "5": "e", "6": "f", "7": "g", "8": "h"
-	}
-	this.sqrGraphicsByID = {};
 
 	// Register for events
 	gameEvent.subscribe("PieceSelected", onPieceSelected, this);
@@ -26,12 +20,12 @@ var BoardFX = function(renderer, stage){
 	gameEvent.subscribe("AIMovedPiece", onPieceMoved, this);
 };
 
+// Returns the center coordinate of the square graphic
 BoardFX.prototype.getCanvasLocFromSqrID = function(sqrID){
-	var canvasLoc = {
-		x: (this.file2numeral[sqrID.charAt(0)] - 1) * this.sqrWidth + this.sqrWidth/2 + settings.boardSqrBorderSize/2,
+	return {
+		x: (sqrID.charCodeAt(0) - 97) * this.sqrWidth + this.sqrWidth/2 + settings.boardSqrBorderSize/2,
 		y: (8 - parseInt(sqrID.charAt(1))) * this.sqrWidth + this.sqrWidth/2 + settings.boardSqrBorderSize/2
 	};
-	return canvasLoc;
 };
 
 BoardFX.prototype.getSqrWidth = function(){
@@ -70,19 +64,13 @@ BoardFX.prototype.renderBoard = function(){
 
 			// Register click handler
 			sqr.interactive = true;
-			sqr.chessSqrCol = col;
-			sqr.chessSqrRow = row;
-			var thisObj = this;
+			sqr.chessSqrID = String.fromCharCode(97 + col) + (8 - row);
 			sqr.on("pointerdown", function(e){
-				sqrID = thisObj.numeral2file[e.currentTarget.chessSqrCol + 1] + (8 - e.currentTarget.chessSqrRow);
-				gameEvent.fire("BoardSquareSelected", {sqrID: sqrID});
+				gameEvent.fire("BoardSquareSelected", {sqrID: e.currentTarget.chessSqrID});
 			});
 
 			// Add to parent container
 			this.boardContainer.addChild(sqr);
-
-			// Update sqrGraphicsByID map
-			this.sqrGraphicsByID[this.numeral2file[col + 1] + (8 - row)] = sqr;
 
 			// Toggle isWhite flag
 			isWhite = !isWhite;
@@ -95,33 +83,58 @@ BoardFX.prototype.renderBoard = function(){
 
 module.exports = BoardFX;
 
-function destroyHighlight(){
-	if(this.selectedSqrHighlight){
-		this.stage.removeChild(this.selectedSqrHighlight);
-		this.renderer.render(this.stage);
-		this.selectedSqrHighlight.destroy();
-		this.selectedSqrHighlight = null;
-	}
-}
-
+/* EVENT HANDLERS */
 function onPieceMoved(eventName, data){
-	destroyHighlight.call(this);
+	destroyHighlights.call(this);
 }
 
 function onPieceSelected(eventName, data){
-	destroyHighlight.call(this);
-	var sqrToHighlight = this.sqrGraphicsByID[data.sqrID],
-		posX = sqrToHighlight.chessSqrCol * this.sqrWidth + settings.boardSqrBorderSize/2,
-		posY = sqrToHighlight.chessSqrRow * this.sqrWidth + settings.boardSqrBorderSize/2;
-
-	this.selectedSqrHighlight = new PIXI.Graphics();
-	this.selectedSqrHighlight.lineStyle(settings.boardSqrBorderSize, settings.boardSqrBorderColorHighlighted);
-	this.selectedSqrHighlight.drawRect(posX, posY, this.sqrWidth, this.sqrWidth);
-	
-	this.stage.addChild(this.selectedSqrHighlight);
-	this.renderer.render(this.stage);
+	highlightSelectedSqrAndMoves.call(this, data.sqrID, data.moves);
 }
 
 function onBoardSetup(eventName, data){
 	this.renderBoard();
+}
+
+/* PRIVATE ROUTINES */
+
+function highlightSelectedSqrAndMoves(sqrID, moves){
+	// Clean up old highlights
+	destroyHighlights.call(this);
+
+	this.highlights = new PIXI.Container();
+
+	// Get the canvas position to draw the highlight at
+	var canvasPos = this.getCanvasLocFromSqrID(sqrID);
+
+	// Highlight the square with the selected piece
+	highlightSquare.call(this, sqrID, settings.boardSqrHighlightColorForSelectedPiece);
+
+	// Highlight available moves
+	var thisObj = this;
+	R.forEach(function(sqrID){
+		highlightSquare.call(thisObj, sqrID, settings.boardSqrHighlightColor);
+	}, moves);
+
+	// Add highlight underneath pieces container
+	this.stage.addChildAt(this.highlights, this.stage.children.length-1);
+	this.renderer.render(this.stage);
+}
+
+function highlightSquare(sqrID, color){
+	var canvasPos = this.getCanvasLocFromSqrID(sqrID),
+		sqrHighlight = new PIXI.Graphics();
+
+	sqrHighlight.beginFill(color);
+	sqrHighlight.drawRect(canvasPos.x - this.sqrWidth/2 + settings.boardSqrBorderSize/2, canvasPos.y - this.sqrWidth/2 + settings.boardSqrBorderSize/2, this.sqrWidth - settings.boardSqrBorderSize, this.sqrWidth - settings.boardSqrBorderSize);
+	this.highlights.addChild(sqrHighlight);
+}
+
+function destroyHighlights(){
+	if(this.highlights){
+		this.stage.removeChild(this.highlights);
+		this.renderer.render(this.stage);
+		this.highlights.destroy();
+		this.highlights = null;
+	}
 }

@@ -20,14 +20,12 @@ var BoardManager = function(){
 	gameEvent.fire("BoardSetup", {pieces: this.board2piece});
 };
 
-BoardManager.prototype.isValidMove = function(fromSqrID, toSqrID){
-	var pieceID = this.board2piece[fromSqrID],
-		destPieceID = this.board2piece[toSqrID],
-		toSqrIsEmpty = destPieceID == null ? true : false,
-		toSqrContainsOpponentPiece = destPieceID != null && destPieceID.charAt(0) != pieceID.charAt(0) ? true : false,
-		validMoves = getValidMoves.call(this, pieceID, fromSqrID);
+BoardManager.prototype.getMovesFrom = function(sqrID){
+	return getValidMoves.call(this, sqrID);
+};
 
-	return R.contains(toSqrID, validMoves) && (toSqrIsEmpty || toSqrContainsOpponentPiece);
+BoardManager.prototype.isValidMove = function(fromSqrID, toSqrID){
+	return R.contains(toSqrID, getValidMoves.call(this, fromSqrID));
 };
 
 BoardManager.prototype.movePiece = function(sourceSqrID, targetSqrID){
@@ -77,8 +75,9 @@ function initBoard2Piece(){
 	}, this.pieceStartPos);
 }
 
-function getValidMoves(pieceID, sqrID){
-	var validMoves = [],
+function getValidMoves(sqrID){
+	var pieceID = this.board2piece[sqrID],
+		validMoves = [],
 		offsets = [],
 		board2piece = this.board2piece,
 		fileNumeral = sqrID.charCodeAt(0) - 96, // 1 thru 8 corresponding to a thru h
@@ -222,12 +221,17 @@ function getValidMoves(pieceID, sqrID){
 		break;
 	}
 
+	var thisObj = this;
 	R.forEach(function(offset){
-		validMoves.push(
-			num2algebraic(
+		var move = num2algebraic(
 				addOffsetToNumSqrID(offset, fileNumeral, rankNumeral)
-			)
-		);
+			),
+			sqrIsEmpty = !thisObj.board2piece[move],
+			sqrContainsOpponentPiece = !!thisObj.board2piece[move] && thisObj.board2piece[move].charAt(0) != pieceID.charAt(0);
+
+		if(sqrIsEmpty || sqrContainsOpponentPiece){
+			validMoves.push(move);
+		}
 	}, offsets);
 
 	return validMoves;

@@ -13,9 +13,10 @@ var settings = {
 
 	boardSqrBorderSize: 5,                 				// in px
 	boardSqrBorderColor: 0x000000,
-	boardSqrBorderColorHighlighted: 0xfff760,
 	boardSqrWhiteColor: 0xFFFFFF,
 	boardSqrBlackColor: 0x666666,
+	boardSqrHighlightColor: 0xa0f2ff,
+	boardSqrHighlightColorForSelectedPiece: 0xfff760,
 
 	// Game settings
 

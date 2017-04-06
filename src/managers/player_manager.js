@@ -30,7 +30,7 @@ function onPlayerSelectedSquare(eventName, data){
 				if(this.boardManager.squareHasPlayerPiece(sqrID)){
 					this.lastSelectedSquareWithOwnedPiece = sqrID;
 					console.log("Player has selected square: " + sqrID);
-					gameEvent.fire("PieceSelected", {sqrID: sqrID});
+					gameEvent.fire("PieceSelected", {sqrID: sqrID, moves: this.boardManager.getMovesFrom(sqrID)});
 				}
 				// Validate the move
 				else if(this.boardManager.isValidMove(this.lastSelectedSquareWithOwnedPiece, sqrID)){
@@ -49,7 +49,7 @@ function onPlayerSelectedSquare(eventName, data){
 			// Record their selected square with owned piece in anticipation of move
 			this.lastSelectedSquareWithOwnedPiece = sqrID;
 			console.log("Player has selected square: " + sqrID);
-			gameEvent.fire("PieceSelected", {sqrID: sqrID});
+			gameEvent.fire("PieceSelected", {sqrID: sqrID, moves: this.boardManager.getMovesFrom(sqrID)});
 		}else{
 			console.log("No owned piece at this square.");
 		}
