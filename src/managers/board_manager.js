@@ -106,11 +106,31 @@ BoardManager.prototype.squareHasPlayerPiece = function(sqrID){
 	return !!this.board2piece[sqrID] && this.board2piece[sqrID].charAt(0) == settings.playerColor; 
 };
 
+BoardManager.prototype.areAnyOfTheseSqrsUnderAttackByOpponent = function(sqrs){
+	var thisObj = this;
+	return R.any(function(sqrID){
+		return !!thisObj.board2attacker[sqrID] && 
+			R.any(function(attackerID){
+				return attackerID.charAt(0) != settings.playerColor;
+			}, thisObj.board2attacker[sqrID]);
+	}, sqrs);
+};
+
+BoardManager.prototype.areAnyOfTheseSqrsUnderAttackByPlayer = function(sqrs, player){
+	var thisObj = this;
+	return R.any(function(sqrID){
+		return !!thisObj.board2attacker[sqrID] && 
+			R.any(function(attackerID){
+				return attackerID.charAt(0) == player;
+			}, thisObj.board2attacker[sqrID]);
+	}, sqrs);
+};
+
 module.exports = BoardManager;
 
 function isPlayerInCheck(player){
 	var kingSqrID = this.pieceDataByID[player + "K"].file + this.pieceDataByID[player + "K"].rank;
-	return !!this.board2attacker[kingSqrID];
+	return this.areAnyOfTheseSqrsUnderAttackByOpponent(kingSqrID);
 }
 
 function isPlayerOutOfCheckAfterMove(player, fromSqrID, toSqrID){
@@ -119,7 +139,7 @@ function isPlayerOutOfCheckAfterMove(player, fromSqrID, toSqrID){
 		attackingPieceID = this.board2attacker[kingSqrID][0],
 		attackerType = attackingPieceID.charAt(1),
 		attackingPieceSqrID = this.pieceDataByID[attackingPieceID].file + this.pieceDataByID[attackingPieceID].rank,
-		kingCanMoveOutOfCheck = movingPiece.charAt(1) == "K" && !this.board2attacker[toSqrID],
+		kingCanMoveOutOfCheck = movingPiece.charAt(1) == "K" && !this.areAnyOfTheseSqrsUnderAttackByOpponent(toSqrID),
 		pieceAttackingKingIsCaptured = toSqrID == attackingPieceSqrID,
 		attackersPathCanBeBlocked =	
 			(attackerType == "Q" || attackerType == "B" || attackerType == "R") && 
@@ -401,7 +421,7 @@ function getValidMoves(sqrID, onlyCountSqrsUnderAttackForPawns){
 						kingSqrID, 
 						num2algebraic(addOffsetToNumSqrID({fileOffset: 1, rankOffset: 0}, fileNumeral, rankNumeral)),
 						num2algebraic(addOffsetToNumSqrID({fileOffset: 2, rankOffset: 0}, fileNumeral, rankNumeral))],
-					kingDoesntMoveOutOfOrThroughCheckToCastle = !areAnyOfTheseSqrsUnderAttackByOpponent(sqrIDsToMoveThru),
+					kingDoesntMoveOutOfOrThroughCheckToCastle = !this.areAnyOfTheseSqrsUnderAttackByOpponent(sqrIDsToMoveThru),
 					noPiecesBetweenKingAndKingsideRook = !board2piece[sqrIDsToMoveThru[1]] && !board2piece[sqrIDsToMoveThru[2]];
 
 				if(kingDoesntMoveOutOfOrThroughCheckToCastle && noPiecesBetweenKingAndKingsideRook){
@@ -413,7 +433,7 @@ function getValidMoves(sqrID, onlyCountSqrsUnderAttackForPawns){
 						kingSqrID, 
 						num2algebraic(addOffsetToNumSqrID({fileOffset: -1, rankOffset: 0}, fileNumeral, rankNumeral)),
 						num2algebraic(addOffsetToNumSqrID({fileOffset: -2, rankOffset: 0}, fileNumeral, rankNumeral))],
-					kingDoesntMoveOutOfOrThroughCheckToCastle = !areAnyOfTheseSqrsUnderAttackByOpponent(sqrIDsToMoveThru),
+					kingDoesntMoveOutOfOrThroughCheckToCastle = !this.areAnyOfTheseSqrsUnderAttackByOpponent(sqrIDsToMoveThru),
 					noPiecesBetweenKingAndQueensideRook = !board2piece[sqrIDsToMoveThru[1]] && !board2piece[sqrIDsToMoveThru[2]];
 
 				if(kingDoesntMoveOutOfOrThroughCheckToCastle && noPiecesBetweenKingAndQueensideRook){
@@ -421,15 +441,6 @@ function getValidMoves(sqrID, onlyCountSqrsUnderAttackForPawns){
 				}
 			}
 		}
-	}
-
-	function areAnyOfTheseSqrsUnderAttackByOpponent(sqrs){
-		return R.any(function(sqrID){
-			return !!board2attacker[sqrID] && 
-				R.any(function(attackerID){
-					return attackerID.charAt(0) != settings.playerColor;
-				}, board2attacker[sqrID]);
-		}, sqrs);
 	}
 
 	switch(pieceID.charAt(1)){
@@ -442,7 +453,7 @@ function getValidMoves(sqrID, onlyCountSqrsUnderAttackForPawns){
 			}
 
 			// Add castling offsets
-			addCastlingOffsets(offsets);
+			addCastlingOffsets.call(this, offsets);
 		break;
 		case "Q":
 			addStrafeOffsets(offsets);
@@ -499,7 +510,7 @@ function getValidMoves(sqrID, onlyCountSqrsUnderAttackForPawns){
 
 		if(sqrIsEmpty || sqrContainsOpponentPiece){
 			// If the piece is a king, make sure its not moving into a square under attack
-			if(pieceID.charAt(1) != "K" || !areAnyOfTheseSqrsUnderAttackByOpponent([move])){
+			if(pieceID.charAt(1) != "K" || !thisObj.areAnyOfTheseSqrsUnderAttackByOpponent([move])){
 				validMoves.push(move);
 			}
 		}
