@@ -54,7 +54,7 @@ BoardManager.prototype.movePiece = function(sourceSqrID, targetSqrID){
 	delete this.board2piece[sourceSqrID];
 	if(this.board2piece[targetSqrID]){
 		gameEvent.fire("PieceCaptured", {capturedPieceID: this.board2piece[targetSqrID], sqrID: targetSqrID});
-		// Check if we performed an en passant capture
+	// Check if we performed an en passant capture
 	}else if(movingPieceID.charAt(1) == "P" && sourceSqrID.charAt(0) != targetSqrID.charAt(0)){
 		var targetOfEnPassantAttackSqrID = movingPieceID.charAt(0) == "W" ? 
 			targetSqrID.charAt(0) + (parseInt(targetSqrID.charAt(1)) - 1) :
@@ -62,6 +62,19 @@ BoardManager.prototype.movePiece = function(sourceSqrID, targetSqrID){
 
 		gameEvent.fire("PieceCaptured", {capturedPieceID: this.board2piece[targetOfEnPassantAttackSqrID], sqrID: targetOfEnPassantAttackSqrID});
 		this.board2piece[targetOfEnPassantAttackSqrID] = null;
+	// Check if we castled
+	}else if(movingPieceID.charAt(1) == "K" && Math.abs(sourceSqrID.charCodeAt(0) - targetSqrID.charCodeAt(0)) == 2){
+		var player = movingPieceID.charAt(0),
+			castleKingside = sourceSqrID.charCodeAt(0) - targetSqrID.charCodeAt(0) < 0,
+			rookID = castleKingside ? player + "Rh" : player + "Ra",
+			rookSqrID = castleKingside ? this.pieceDataByID[player + "Rh"].file + this.pieceDataByID[player + "Rh"].rank :
+				this.pieceDataByID[player + "Ra"].file + this.pieceDataByID[player + "Ra"].rank,
+			sqrToPlaceRook = castleKingside ? String.fromCharCode(targetSqrID.charCodeAt(0) - 1) + targetSqrID.charAt(1) :
+				String.fromCharCode(targetSqrID.charCodeAt(0) + 1) + targetSqrID.charAt(1);
+
+		delete this.board2piece[rookSqrID];
+		this.board2piece[sqrToPlaceRook] = rookID;
+		console.log(player + " castled " + (castleKingside ? "kingside." : "queenside."));
 	}
 	this.board2piece[targetSqrID] = movingPieceID;
 	// Update pieceDataByID
@@ -256,13 +269,15 @@ function getValidMoves(sqrID, onlyCountSqrsUnderAttackForPawns){
 		validMoves = [],
 		offsets = [],
 		board2piece = this.board2piece,
+		board2attacker = this.board2attacker,
 		pieceDataByID = this.pieceDataByID,
 		fileNumeral = sqrID.charCodeAt(0) - 96, // 1 thru 8 corresponding to a thru h
 		rankNumeral = parseInt(sqrID.charAt(1)),
-		turnID = this.turnID;
+		turnID = this.turnID,
+		pieceStartPos = this.pieceStartPos;
 
 	function addStrafeOffsets(offsets, diagonal){
-		// Build offsets for strafing the diagonals
+		// Build offsets for strafing ranks and files or diagonals
 		var directions = diagonal ? ["NW", "NE", "SW", "SE"] : ["N", "W", "S", "E"];
 		for(var i = 0; i < directions.length; i++){
 			var dir = directions[i];
@@ -370,6 +385,53 @@ function getValidMoves(sqrID, onlyCountSqrsUnderAttackForPawns){
 		return moveCnt;
 	}
 
+	function addCastlingOffsets(offsets){
+		var player = pieceID.charAt(0),
+			kingSqrID = pieceStartPos[player + "K"],
+			kingMoveCnt = getMoveCntFromHistory(pieceDataByID[player + "K"].moveHistory),
+			kingHasNeverMoved = kingMoveCnt == 0,
+			kingSideRookMoveCnt = getMoveCntFromHistory(pieceDataByID[player + "Rh"].moveHistory),
+			kingsideRookHasNeverMoved = kingSideRookMoveCnt == 0,
+			queensideRookMoveCnt = getMoveCntFromHistory(pieceDataByID[player + "Ra"].moveHistory),
+			queensideRookHasNeverMoved = queensideRookMoveCnt == 0;
+
+		if(kingHasNeverMoved){
+			if(kingsideRookHasNeverMoved){
+				var sqrIDsToMoveThru = [
+						kingSqrID, 
+						num2algebraic(addOffsetToNumSqrID({fileOffset: 1, rankOffset: 0}, fileNumeral, rankNumeral)),
+						num2algebraic(addOffsetToNumSqrID({fileOffset: 2, rankOffset: 0}, fileNumeral, rankNumeral))],
+					kingDoesntMoveOutOfOrThroughCheckToCastle = !areAnyOfTheseSqrsUnderAttackByOpponent(sqrIDsToMoveThru),
+					noPiecesBetweenKingAndKingsideRook = !board2piece[sqrIDsToMoveThru[1]] && !board2piece[sqrIDsToMoveThru[2]];
+
+				if(kingDoesntMoveOutOfOrThroughCheckToCastle && noPiecesBetweenKingAndKingsideRook){
+					offsets.push({fileOffset: 2, rankOffset: 0});
+				}
+			}
+			if(queensideRookHasNeverMoved){
+				var sqrIDsToMoveThru = [
+						kingSqrID, 
+						num2algebraic(addOffsetToNumSqrID({fileOffset: -1, rankOffset: 0}, fileNumeral, rankNumeral)),
+						num2algebraic(addOffsetToNumSqrID({fileOffset: -2, rankOffset: 0}, fileNumeral, rankNumeral))],
+					kingDoesntMoveOutOfOrThroughCheckToCastle = !areAnyOfTheseSqrsUnderAttackByOpponent(sqrIDsToMoveThru),
+					noPiecesBetweenKingAndQueensideRook = !board2piece[sqrIDsToMoveThru[1]] && !board2piece[sqrIDsToMoveThru[2]];
+
+				if(kingDoesntMoveOutOfOrThroughCheckToCastle && noPiecesBetweenKingAndQueensideRook){
+					offsets.push({fileOffset: -2, rankOffset: 0});
+				}
+			}
+		}
+	}
+
+	function areAnyOfTheseSqrsUnderAttackByOpponent(sqrs){
+		return R.any(function(sqrID){
+			return !!board2attacker[sqrID] && 
+				R.any(function(attackerID){
+					return attackerID.charAt(0) != settings.playerColor;
+				}, board2attacker[sqrID]);
+		}, sqrs);
+	}
+
 	switch(pieceID.charAt(1)){
 		case "K":
 			for(var fileOffset = fileNumeral > 1 ? -1 : 0; fileOffset <= (fileNumeral < 8 ? 1 : 0); fileOffset++){
@@ -378,6 +440,9 @@ function getValidMoves(sqrID, onlyCountSqrsUnderAttackForPawns){
 					offsets.push({fileOffset: fileOffset, rankOffset: rankOffset});
 				}
 			}
+
+			// Add castling offsets
+			addCastlingOffsets(offsets);
 		break;
 		case "Q":
 			addStrafeOffsets(offsets);
@@ -434,7 +499,7 @@ function getValidMoves(sqrID, onlyCountSqrsUnderAttackForPawns){
 
 		if(sqrIsEmpty || sqrContainsOpponentPiece){
 			// If the piece is a king, make sure its not moving into a square under attack
-			if(pieceID.charAt(1) != "K" || !thisObj.board2attacker[move]){
+			if(pieceID.charAt(1) != "K" || !areAnyOfTheseSqrsUnderAttackByOpponent([move])){
 				validMoves.push(move);
 			}
 		}
