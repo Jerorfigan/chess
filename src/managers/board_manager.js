@@ -12,9 +12,10 @@ var BoardManager = function(){
 	this.players = ["W", "B"];
 	
 	// Init maps
-	this.piece2board = {};
+	this.pieceDataByID = {};
 	this.board2piece = {};
-	initPiece2Board.call(this);
+	this.board2attacker = {};
+	initPieceDataByID.call(this);
 	initBoard2Piece.call(this);
 
 	gameEvent.fire("BoardSetup", {pieces: this.board2piece});
@@ -25,13 +26,22 @@ BoardManager.prototype.getMovesFrom = function(sqrID){
 };
 
 BoardManager.prototype.isValidMove = function(fromSqrID, toSqrID){
-	return R.contains(toSqrID, getValidMoves.call(this, fromSqrID));
+	var player = this.board2piece[fromSqrID].charAt(0);
+	if(isPlayerInCheck.call(this, player)){
+		return R.contains(toSqrID, getValidMoves.call(this, fromSqrID)) && 
+			isPlayerOutOfCheckAfterMove.call(this, player, fromSqrID, toSqrID);
+	}else{
+		return R.contains(toSqrID, getValidMoves.call(this, fromSqrID));
+	}
 };
 
 BoardManager.prototype.movePiece = function(sourceSqrID, targetSqrID){
 	if(!this.board2piece[sourceSqrID]) throw "Attempt to move piece from empty square";
 
 	console.log("Moving " + this.board2piece[sourceSqrID] + " from " + sourceSqrID + " to " + targetSqrID);
+
+	// Update board2attacker, noting locations no longer under attack by this piece from old sqr
+	removeOldAttackDataForMovingPiece.call(this, sourceSqrID);
 
 	// Update board2piece map
 	var movingPieceID = this.board2piece[sourceSqrID];
@@ -40,12 +50,28 @@ BoardManager.prototype.movePiece = function(sourceSqrID, targetSqrID){
 		gameEvent.fire("PieceCaptured", {capturedPieceID: this.board2piece[targetSqrID], sqrID: targetSqrID});
 	}
 	this.board2piece[targetSqrID] = movingPieceID;
-	// Update piece2board map
-	var movingPiece = this.piece2board[movingPieceID];
+	// Update pieceDataByID
+	var movingPiece = this.pieceDataByID[movingPieceID];
 	movingPiece.rank = targetSqrID.charAt(1);
 	movingPiece.file = targetSqrID.charAt(0);
 
+	// Update board2attacker, noting new locations now under attack by this piece from new sqr
+	addNewAttackDataForMovingPiece.call(this, targetSqrID);
+
 	gameEvent.fire("BoardUpdated", {pieces: this.board2piece});
+
+	var opponentPlayer = movingPieceID.charAt(0) == "W" ? "B" : "W";
+	if(isPlayerInCheck.call(this, opponentPlayer) && hasCheckmateOccurred.call(this, targetSqrID)){
+		var winningPlayer = movingPieceID.charAt(0);
+		gameEvent.fire("Checkmate", {winningPlayer: winningPlayer});
+		console.log("Checkmate. " + winningPlayer + " wins.");
+	}else if(hasStalemateOccured.call(this)){
+		gameEvent.fire("Stalemate");
+		console.log("Stalemate.");
+	}else if(shouldPawnBePromoted.call(this, sourceSqrID)){
+		promotePawnAtSqr.call(this, sourceSqrID);
+		conole.log("Pawn promoted");
+	}
 };
 
 BoardManager.prototype.squareHasPlayerPiece = function(sqrID){
@@ -54,12 +80,146 @@ BoardManager.prototype.squareHasPlayerPiece = function(sqrID){
 
 module.exports = BoardManager;
 
-function initPiece2Board(){
+function isPlayerInCheck(player){
+	var kingSqrID = this.pieceDataByID[player + "K"].file + this.pieceDataByID[player + "K"].rank;
+	return !!this.board2attacker[kingSqrID];
+}
+
+function isPlayerOutOfCheckAfterMove(player, fromSqrID, toSqrID){
+	var movingPiece = this.board2piece[fromSqrID],
+		kingSqrID = this.pieceDataByID[player + "K"].file + this.pieceDataByID[player + "K"].rank,
+		attackingPieceID = this.board2attacker[kingSqrID][0],
+		attackerType = attackingPieceID.charAt(1),
+		attackingPieceSqrID = this.pieceDataByID[attackingPieceID].file + this.pieceDataByID[attackingPieceID].rank,
+		kingCanMoveOutOfCheck = movingPiece.charAt(1) == "K" && !this.board2attacker[toSqrID],
+		pieceAttackingKingIsCaptured = toSqrID == attackingPieceSqrID,
+		attackersPathCanBeBlocked =	
+			(attackerType == "Q" || attackerType == "B" || attackerType == "R") && 
+			movingPieceID.charAt(1) != "K" &&
+			getSqrsInbetweenSqrs(kingSqrID, attackingPieceSqrID).indexOf(toSqrID) != -1;
+
+	return kingCanMoveOutOfCheck || pieceAttackingKingIsCaptured || attackersPathCanBeBlocked;
+}
+
+function getSqrsInbetweenSqrs(sqr1, sqr2){
+	var inbetweenSqrs = [],
+		sqr1file = sqr1.charAt(0),
+		sqr1rank = sqr1.charAt(1),
+		sqr2file = sqr2.charAt(0),
+		sqr2rank = sqr2.charAt(1);
+
+	if(sqr1file == sqr2file){
+		for(var rank = sqr1rank < sqr2rank ? sqr1rank : sqr2rank; rank < (sqr1rank < sqr2rank ? sqr2rank : sqr1rank); rank++){
+			inbetweenSqrs.push(sqr1file + rank);
+		}
+	}else if(sqr1rank == sqr2rank){
+		for(var file = sqr1file < sqr2file ? sqr1file : sqr2file; file < (sqr1file < sqr2file ? sqr2file : sqr1file); file++){
+			inbetweenSqrs.push(file + sqr1rank);
+		}
+	}else{
+		var fileCode = sqr1file < sqr2file ? sqr1file.charCodeAt(0) + 1 : sqr2file.charCodeAt(0) + 1,
+			rankDelta = sqr1file < sqr2file ? (sqr1rank > sqr2rank ? -1 : 1) : (sqr1rank > sqr2rank ? 1 : -1),
+			rank = sqr1file < sqr2file ? parseInt(sqr1rank) + rankDelta: parseInt(sqr2rank) + rankDelta;
+		while(
+			(String.fromCharCode(fileCode) + rank) != sqr2 &&  
+			(String.fromCharCode(fileCode) + rank) != sqr1 
+		){
+			inbetweenSqrs.push(String.fromCharCode(fileCode) + rank);
+			fileCode++;
+			rank = rank + rankDelta;
+		}
+	}
+
+	return inbetweenSqrs;
+}
+
+function hasCheckmateOccurred(sqrIDOfLastMove){
+	var playerWhoMovedLast = this.board2piece[sqrIDOfLastMove].charAt(0),
+		opponentPlayer = playerWhoMovedLast == "W" ? "B" : "W",
+		opponentKingSqrID = this.pieceDataByID[opponentPlayer + "K"].file + this.pieceDataByID[opponentPlayer + "K"].rank,
+		attackingPieceID = this.board2attacker[opponentKingSqrID][0],
+		attackerType = attackingPieceID.charAt(1),
+		attackingPieceSqrID = this.pieceDataByID[attackingPieceID].file + this.pieceDataByID[attackingPieceID].rank,
+		opponentKingCantMoveOutOfCheck = getValidMoves.call(this, opponentKingSqrID).length == 0,
+		attackingPieceCantBeCaptured = !this.board2attacker[attackingPieceSqrID] || R.filter(function(pieceID){ return pieceID.charAt(0) == opponentPlayer; }, this.board2attacker[attackingPieceSqrID]).length == 0,
+		attackersPathCanBeBlocked = (attackerType == "Q" || attackerType == "B" || attackerType == "R") && 
+			R.filter(
+				function(sqrID){ 
+					return R.filter(
+						function(pieceID){ 
+							return pieceID.charAt(0) == opponentPlayer; 
+						}, 
+						this.board2attacker[sqrID]).length != 0; 
+				}, 
+				getSqrsInbetweenSqrs(opponentKingSqrID, attackingPieceSqrID)
+			).length != 0;
+
+	return opponentKingCantMoveOutOfCheck && attackingPieceCantBeCaptured && !attackersPathCanBeBlocked; 
+}
+
+function hasStalemateOccured(){
+	// TODO
+	return false;
+}
+
+function shouldPawnBePromoted(){
+	// TODO
+	return false;
+}
+
+function promotePawnAtSqr(sqrID){
+	// TODO
+}
+
+function removeOldAttackDataForMovingPiece(oldSqrID){
+	var movingPieceID = this.board2piece[oldSqrID],
+		oldSqrsUnderAttackByMovingPiece = getValidMoves.call(this, oldSqrID, true),
+		thisObj = this;
+	R.forEach(function(sqrID){
+		if(thisObj.board2attacker[sqrID]){
+			thisObj.board2attacker[sqrID] = R.filter(function(pieceID){ return pieceID != movingPieceID; }, thisObj.board2attacker[sqrID]);
+			// Remove sqr from hash if it is no longer under attack
+			if(thisObj.board2attacker[sqrID].length == 0){
+				delete thisObj.board2attacker[sqrID];
+			}
+		}
+	}, oldSqrsUnderAttackByMovingPiece);
+}
+
+function addNewAttackDataForMovingPiece(newSqrID){
+	var movingPieceID = this.board2piece[newSqrID],
+		newSqrsUnderAttackByMovingPiece = getValidMoves.call(this, newSqrID, true),
+		thisObj = this;
+	R.forEach(function(sqrID){
+		if(!thisObj.board2attacker[sqrID]){
+			thisObj.board2attacker[sqrID] = [];
+			thisObj.board2attacker[sqrID].push(movingPieceID);
+		}else if(thisObj.board2attacker[sqrID].indexOf(movingPieceID) == -1){
+			thisObj.board2attacker[sqrID].push(movingPieceID);
+		}
+	}, newSqrsUnderAttackByMovingPiece);
+}
+
+function initBoard2Attacker(){
+	// Record which squares are under attack by any and all pieces on the board in board2attacker
+	var thisObj = this;
+	R.forEachObjIndexed(function(sqrID, pieceID){
+		var sqrsUnderAttackByPiece = getValidMoves.call(this, sqrID, true);
+		R.forEach(function(sqrID){
+			if(!thisObj.board2attacker[sqrID]){
+				thisObj.board2attacker[sqrID] = [];
+			}
+			thisObj.board2attacker[sqrID].push(pieceID);
+		}, sqrsUnderAttackByPiece);
+	}, this.pieceStartPos);
+}
+
+function initPieceDataByID(){
 	var thisObj = this;
 	R.forEach(function(player){
 		R.forEach(function(piece){
 			var pieceID = player + piece;
-			thisObj.piece2board[pieceID] = {
+			thisObj.pieceDataByID[pieceID] = {
 				rank: thisObj.pieceStartPos[pieceID].charAt(1),
 				file: thisObj.pieceStartPos[pieceID].charAt(0),
 				pieceAbbrev: piece.charAt(0)
@@ -75,7 +235,7 @@ function initBoard2Piece(){
 	}, this.pieceStartPos);
 }
 
-function getValidMoves(sqrID){
+function getValidMoves(sqrID, onlyCountSqrsUnderAttackForPawns){
 	var pieceID = this.board2piece[sqrID],
 		validMoves = [],
 		offsets = [],
@@ -200,13 +360,15 @@ function getValidMoves(sqrID){
 			addStrafeOffsets(offsets);
 		break;
 		case "P":
-			var player = pieceID.charAt(0);
-			var oneSqrForward = {fileOffset: 0, rankOffset: player == "W" ? 1 : -1};
-			if(isSqrAtOffsetEmpty(oneSqrForward)){
-				offsets.push(oneSqrForward);
-				var twoSqrsForward = {fileOffset: 0, rankOffset: player == "W" ? 2 : -2};
-				if(rankNumeral == (player == "W" ? 2 : 7) && isSqrAtOffsetEmpty(twoSqrsForward)){
-					offsets.push(twoSqrsForward);
+			if(!onlyCountSqrsUnderAttackForPawns){
+				var player = pieceID.charAt(0);
+				var oneSqrForward = {fileOffset: 0, rankOffset: player == "W" ? 1 : -1};
+				if(isSqrAtOffsetEmpty(oneSqrForward)){
+					offsets.push(oneSqrForward);
+					var twoSqrsForward = {fileOffset: 0, rankOffset: player == "W" ? 2 : -2};
+					if(rankNumeral == (player == "W" ? 2 : 7) && isSqrAtOffsetEmpty(twoSqrsForward)){
+						offsets.push(twoSqrsForward);
+					}
 				}
 			}
 			// Add attack moves
@@ -214,7 +376,7 @@ function getValidMoves(sqrID){
 				[{fileOffset: -1, rankOffset: 1}, {fileOffset: 1, rankOffset: 1}] :
 				[{fileOffset: -1, rankOffset: -1}, {fileOffset: 1, rankOffset: -1}];
 			R.forEach(function(attackOffset){
-				if(sqrAtOffsetContainsOpponentPiece(attackOffset)){
+				if(sqrAtOffsetContainsOpponentPiece(attackOffset) || onlyCountSqrsUnderAttackForPawns){
 					offsets.push(attackOffset);
 				}
 			}, attackOffsets);
@@ -230,7 +392,10 @@ function getValidMoves(sqrID){
 			sqrContainsOpponentPiece = !!thisObj.board2piece[move] && thisObj.board2piece[move].charAt(0) != pieceID.charAt(0);
 
 		if(sqrIsEmpty || sqrContainsOpponentPiece){
-			validMoves.push(move);
+			// If the piece is a king, make sure its not moving into a square under attack
+			if(pieceID.charAt(1) != "K" || !thisObj.board2attacker[move]){
+				validMoves.push(move);
+			}
 		}
 	}, offsets);
 

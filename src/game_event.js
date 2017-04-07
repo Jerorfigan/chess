@@ -30,5 +30,7 @@ gameEvent.create("PieceSelected");
 gameEvent.create("PlayerMovedPiece");
 gameEvent.create("AIMovedPiece");
 gameEvent.create("PieceCaptured");
+gameEvent.create("Checkmate");
+gameEvent.create("Stalemate");
 
 module.exports = gameEvent;
