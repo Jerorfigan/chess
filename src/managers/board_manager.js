@@ -18,7 +18,13 @@ var BoardManager = function(){
 	initPieceDataByID.call(this);
 	initBoard2Piece.call(this);
 
+	this.turnID = 1;
+
 	gameEvent.fire("BoardSetup", {pieces: this.board2piece});
+};
+
+BoardManager.prototype.getCurrentTurn = function(){
+	return this.turnID;
 };
 
 BoardManager.prototype.getMovesFrom = function(sqrID){
@@ -48,12 +54,21 @@ BoardManager.prototype.movePiece = function(sourceSqrID, targetSqrID){
 	delete this.board2piece[sourceSqrID];
 	if(this.board2piece[targetSqrID]){
 		gameEvent.fire("PieceCaptured", {capturedPieceID: this.board2piece[targetSqrID], sqrID: targetSqrID});
+		// Check if we performed an en passant capture
+	}else if(movingPieceID.charAt(1) == "P" && sourceSqrID.charAt(0) != targetSqrID.charAt(0)){
+		var targetOfEnPassantAttackSqrID = movingPieceID.charAt(0) == "W" ? 
+			targetSqrID.charAt(0) + (parseInt(targetSqrID.charAt(1)) - 1) :
+			targetSqrID.charAt(0) + (parseInt(targetSqrID.charAt(1)) + 1);
+
+		gameEvent.fire("PieceCaptured", {capturedPieceID: this.board2piece[targetOfEnPassantAttackSqrID], sqrID: targetOfEnPassantAttackSqrID});
+		this.board2piece[targetOfEnPassantAttackSqrID] = null;
 	}
 	this.board2piece[targetSqrID] = movingPieceID;
 	// Update pieceDataByID
 	var movingPiece = this.pieceDataByID[movingPieceID];
 	movingPiece.rank = targetSqrID.charAt(1);
 	movingPiece.file = targetSqrID.charAt(0);
+	movingPiece.moveHistory[this.turnID++] = targetSqrID;
 
 	// Update board2attacker, noting new locations now under attack by this piece from new sqr
 	addNewAttackDataForMovingPiece.call(this, targetSqrID);
@@ -222,7 +237,8 @@ function initPieceDataByID(){
 			thisObj.pieceDataByID[pieceID] = {
 				rank: thisObj.pieceStartPos[pieceID].charAt(1),
 				file: thisObj.pieceStartPos[pieceID].charAt(0),
-				pieceAbbrev: piece.charAt(0)
+				pieceAbbrev: piece.charAt(0),
+				moveHistory: {}
 			};
 		}, thisObj.pieces);
 	}, this.players);
@@ -240,8 +256,10 @@ function getValidMoves(sqrID, onlyCountSqrsUnderAttackForPawns){
 		validMoves = [],
 		offsets = [],
 		board2piece = this.board2piece,
+		pieceDataByID = this.pieceDataByID,
 		fileNumeral = sqrID.charCodeAt(0) - 96, // 1 thru 8 corresponding to a thru h
-		rankNumeral = parseInt(sqrID.charAt(1));
+		rankNumeral = parseInt(sqrID.charAt(1)),
+		turnID = this.turnID;
 
 	function addStrafeOffsets(offsets, diagonal){
 		// Build offsets for strafing the diagonals
@@ -330,6 +348,28 @@ function getValidMoves(sqrID, onlyCountSqrsUnderAttackForPawns){
 		return !!board2piece[sqrID] && board2piece[sqrID].charAt(0) != settings.playerColor;
 	}
 
+	function isEnPassantAttack(offset, player){
+		var sqrIDForEnPassantAttack = offset.fileOffset == -1 ? 
+				num2algebraic(addOffsetToNumSqrID({fileOffset: -1, rankOffset: 0}, fileNumeral, rankNumeral)) : 
+				num2algebraic(addOffsetToNumSqrID({fileOffset: 1, rankOffset: 0}, fileNumeral, rankNumeral)),
+			targetOfEnPassantAttackPieceId = board2piece[sqrIDForEnPassantAttack],
+			targetExistsAndIsPawn = targetOfEnPassantAttackPieceId != null && targetOfEnPassantAttackPieceId.charAt(1) == "P",
+			targMoveHist = targetExistsAndIsPawn ? pieceDataByID[targetOfEnPassantAttackPieceId].moveHistory : null,
+			targetMoveCnt = targMoveHist != null ? getMoveCntFromHistory(targMoveHist) : 0,
+			targetPawnMovedTwoRanksLastTurn = targetExistsAndIsPawn && targetMoveCnt == 1 && !!targMoveHist[turnID - 1] && 
+				((player == "W" && targMoveHist[turnID - 1].charAt(1) == 5) || (player == "B" && targMoveHist[turnID - 1].charAt(1) == 4));
+
+		return ((player == "W" && rankNumeral == 5) || (player == "B" && rankNumeral == 4)) && targetExistsAndIsPawn && targetPawnMovedTwoRanksLastTurn;
+	}
+
+	function getMoveCntFromHistory(pieceMoveHistory){
+		var moveCnt = 0;
+		R.forEachObjIndexed(function(sqrID, turnID){
+			moveCnt++;
+		}, pieceMoveHistory);
+		return moveCnt;
+	}
+
 	switch(pieceID.charAt(1)){
 		case "K":
 			for(var fileOffset = fileNumeral > 1 ? -1 : 0; fileOffset <= (fileNumeral < 8 ? 1 : 0); fileOffset++){
@@ -371,12 +411,13 @@ function getValidMoves(sqrID, onlyCountSqrsUnderAttackForPawns){
 					}
 				}
 			}
-			// Add attack moves
+			// Add attack moves & en passant attack moves
 			var attackOffsets = player == "W" ? 
 				[{fileOffset: -1, rankOffset: 1}, {fileOffset: 1, rankOffset: 1}] :
 				[{fileOffset: -1, rankOffset: -1}, {fileOffset: 1, rankOffset: -1}];
 			R.forEach(function(attackOffset){
-				if(sqrAtOffsetContainsOpponentPiece(attackOffset) || onlyCountSqrsUnderAttackForPawns){
+				if(sqrAtOffsetContainsOpponentPiece(attackOffset) || onlyCountSqrsUnderAttackForPawns ||
+				   isEnPassantAttack(attackOffset, player)){
 					offsets.push(attackOffset);
 				}
 			}, attackOffsets);

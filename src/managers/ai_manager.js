@@ -10,7 +10,12 @@ var AIManager = function(boardManager){
 module.exports = AIManager;
 
 function onPlayerMovedPiece(){
-	// Take turn
-	// TODO
+	if(this.boardManager.getCurrentTurn() == 2){
+		this.boardManager.movePiece("h7", "h5");
+	}
+	if(this.boardManager.getCurrentTurn() == 4){
+		this.boardManager.movePiece("a7", "a5");
+	}
+
 	gameEvent.fire("AIMovedPiece");
 }
