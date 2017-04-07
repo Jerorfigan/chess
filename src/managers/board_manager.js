@@ -62,8 +62,8 @@ BoardManager.prototype.movePiece = function(sourceSqrID, targetSqrID){
 			targetSqrID.charAt(0) + (parseInt(targetSqrID.charAt(1)) + 1);
 
 		gameEvent.fire("PieceCaptured", {capturedPieceID: this.board2piece[targetOfEnPassantAttackSqrID], sqrID: targetOfEnPassantAttackSqrID});
-		this.board2piece[targetOfEnPassantAttackSqrID] = null;
 		console.log(movingPieceID + " captures " + this.board2piece[targetOfEnPassantAttackSqrID] + ".");
+		this.board2piece[targetOfEnPassantAttackSqrID] = null;
 	// Check if we castled
 	}else if(movingPieceID.charAt(1) == "K" && Math.abs(sourceSqrID.charCodeAt(0) - targetSqrID.charCodeAt(0)) == 2){
 		var player = movingPieceID.charAt(0),
