@@ -41,20 +41,29 @@ BoardManager.prototype.isValidMove = function(fromSqrID, toSqrID){
 	}
 };
 
+BoardManager.prototype.isValidMoveByID = function(pieceID, toSqrID){
+	return this.isValidMove(this.getSqrWithPiece(pieceID), toSqrID);
+};
+
 BoardManager.prototype.movePiece = function(sourceSqrID, targetSqrID){
 	if(!this.board2piece[sourceSqrID]) throw "Attempt to move piece from empty square";
 
 	console.log("Moving " + this.board2piece[sourceSqrID] + " from " + sourceSqrID + " to " + targetSqrID);
+	var movingPieceID = this.board2piece[sourceSqrID];
 
 	// Update board2attacker, noting locations no longer under attack by this piece from old sqr
-	removeOldAttackDataForMovingPiece.call(this, sourceSqrID);
+	updateAttackDataForPiece.call(this, movingPieceID, true);
 
 	// Update board2piece map
-	var movingPieceID = this.board2piece[sourceSqrID];
 	delete this.board2piece[sourceSqrID];
 	if(this.board2piece[targetSqrID]){
 		gameEvent.fire("PieceCaptured", {capturedPieceID: this.board2piece[targetSqrID], sqrID: targetSqrID});
 		console.log(movingPieceID + " captures " + this.board2piece[targetSqrID] + ".");
+		// Remove attack data for captured piece
+		updateAttackDataForPiece.call(this, this.board2piece[targetSqrID], true);
+		var capturedPiece = this.pieceDataByID[this.board2piece[targetSqrID]];
+		capturedPiece.rank = null;
+		capturedPiece.file = null;
 	// Check if we performed an en passant capture
 	}else if((movingPieceID.charAt(1) == "P" && movingPieceID.charAt(3) == "") && sourceSqrID.charAt(0) != targetSqrID.charAt(0)){
 		var targetOfEnPassantAttackSqrID = movingPieceID.charAt(0) == "W" ? 
@@ -63,6 +72,11 @@ BoardManager.prototype.movePiece = function(sourceSqrID, targetSqrID){
 
 		gameEvent.fire("PieceCaptured", {capturedPieceID: this.board2piece[targetOfEnPassantAttackSqrID], sqrID: targetOfEnPassantAttackSqrID});
 		console.log(movingPieceID + " captures " + this.board2piece[targetOfEnPassantAttackSqrID] + ".");
+		// Remove attack data for captured piece
+		updateAttackDataForPiece.call(this, this.board2piece[targetOfEnPassantAttackSqrID], true);
+		var capturedPiece = this.pieceDataByID[this.board2piece[targetOfEnPassantAttackSqrID]];
+		capturedPiece.rank = null;
+		capturedPiece.file = null;
 		this.board2piece[targetOfEnPassantAttackSqrID] = null;
 	// Check if we castled
 	}else if(movingPieceID.charAt(1) == "K" && Math.abs(sourceSqrID.charCodeAt(0) - targetSqrID.charCodeAt(0)) == 2){
@@ -83,7 +97,7 @@ BoardManager.prototype.movePiece = function(sourceSqrID, targetSqrID){
 	var movingPiece = this.pieceDataByID[movingPieceID];
 	movingPiece.rank = targetSqrID.charAt(1);
 	movingPiece.file = targetSqrID.charAt(0);
-	movingPiece.moveHistory[this.turnID++] = targetSqrID;
+	movingPiece.moveHistory[this.turnID] = targetSqrID;
 
 	if((movingPieceID.charAt(1) == "P" && movingPieceID.charAt(3) == "") && shouldPawnBePromoted.call(this, targetSqrID)){
 		promotePawnAtSqr.call(this, targetSqrID);
@@ -92,7 +106,10 @@ BoardManager.prototype.movePiece = function(sourceSqrID, targetSqrID){
 	}
 
 	// Update board2attacker, noting new locations now under attack by this piece from new sqr
-	addNewAttackDataForMovingPiece.call(this, targetSqrID);
+	updateAttackDataForPiece.call(this, movingPieceID);
+	// We may have opened up new attacks or closed off old attacks for strafing pieces (Queen, Bishop and Rook), so update their attack data as well
+	var strafingPieces = this.getAllPieces(["P", "N", "K"]);
+	updateAttackDataForPieces.call(this, strafingPieces, true);
 
 	gameEvent.fire("BoardUpdated", {pieces: this.board2piece});
 
@@ -105,20 +122,71 @@ BoardManager.prototype.movePiece = function(sourceSqrID, targetSqrID){
 		gameEvent.fire("Stalemate");
 		console.log("Stalemate.");
 	}
+
+	// Increment turn -- needs to be the last thing we do
+	this.turnID++;
 };
+
+BoardManager.prototype.movePieceByID = function(pieceID, targetSqrID){
+	var pieceSqrID = this.getSqrWithPiece(pieceID); 
+	this.movePiece(pieceSqrID, targetSqrID);
+}; 
 
 BoardManager.prototype.squareHasPlayerPiece = function(sqrID){
 	return !!this.board2piece[sqrID] && this.board2piece[sqrID].charAt(0) == settings.playerColor; 
 };
 
 BoardManager.prototype.areAnyOfTheseSqrsUnderAttackByPlayer = function(sqrs, player){
-	var thisObj = this;
+	var sqrs = typeof sqrs != "object" ? [sqrs] : sqrs,
+		thisObj = this;
 	return R.any(function(sqrID){
 		return !!thisObj.board2attacker[sqrID] && 
 			R.any(function(attackerID){
 				return attackerID.charAt(0) == player;
 			}, thisObj.board2attacker[sqrID]);
 	}, sqrs);
+};
+
+BoardManager.prototype.getAllPieces = function(excluding, which, player){
+	var pieces = [],
+		thisObj = this,
+		excluding = !excluding ? [] : excluding,
+		which = !which ? "noncaptured" : which,
+		player = !player ? (this.turnID % 2 == 0 ? "B" : "W") : player;
+
+	R.forEachObjIndexed(function(pieceData, pieceID){
+		if(
+			thisObj.getPieceOwner(pieceID) == player && 
+			((which == "noncaptured" && pieceData.file != null) || (which == "captured" && pieceData.file == null)) &&
+			excluding.indexOf(pieceID) == -1 && excluding.indexOf(thisObj.getPieceType(pieceID)) == -1
+		){
+			pieces.push(pieceID);
+		}
+	}, this.pieceDataByID);
+
+	return pieces;
+};
+
+BoardManager.prototype.getAllValidMovesForPiece = function(pieceID){
+	var sqrID = this.getSqrWithPiece(pieceID);
+	return getValidMoves.call(this, sqrID); 
+};
+
+BoardManager.prototype.getSqrWithPiece = function(pieceID){
+	return this.pieceDataByID[pieceID].file + this.pieceDataByID[pieceID].rank;
+};
+
+BoardManager.prototype.getPieceOwner = function(pieceID){
+	return pieceID.charAt(0);
+};
+
+BoardManager.prototype.getPieceType = function(pieceID){
+	// For promoted pawns, return the type of the promotion
+	if(pieceID.charAt(0) == "P" && pieceID.charAt(3) != ""){
+		return pieceID.charAt(3);
+	}else{
+		return pieceID.charAt(1);
+	}
 };
 
 module.exports = BoardManager;
@@ -140,7 +208,7 @@ function isPlayerOutOfCheckAfterMove(player, fromSqrID, toSqrID){
 		pieceAttackingKingIsCaptured = toSqrID == attackingPieceSqrID,
 		attackersPathCanBeBlocked =	
 			(attackerType == "Q" || attackerType == "B" || attackerType == "R") && 
-			movingPieceID.charAt(1) != "K" &&
+			movingPiece.charAt(1) != "K" &&
 			getSqrsInbetweenSqrs(kingSqrID, attackingPieceSqrID).indexOf(toSqrID) != -1;
 
 	return kingCanMoveOutOfCheck || pieceAttackingKingIsCaptured || attackersPathCanBeBlocked;
@@ -188,16 +256,7 @@ function hasCheckmateOccurred(sqrIDOfLastMove){
 		opponentKingCantMoveOutOfCheck = getValidMoves.call(this, opponentKingSqrID).length == 0,
 		attackingPieceCantBeCaptured = !this.board2attacker[attackingPieceSqrID] || R.filter(function(pieceID){ return pieceID.charAt(0) == opponentPlayer; }, this.board2attacker[attackingPieceSqrID]).length == 0,
 		attackersPathCanBeBlocked = (attackerType == "Q" || attackerType == "B" || attackerType == "R") && 
-			R.filter(
-				function(sqrID){ 
-					return R.filter(
-						function(pieceID){ 
-							return pieceID.charAt(0) == opponentPlayer; 
-						}, 
-						this.board2attacker[sqrID]).length != 0; 
-				}, 
-				getSqrsInbetweenSqrs(opponentKingSqrID, attackingPieceSqrID)
-			).length != 0;
+			this.areAnyOfTheseSqrsUnderAttackByPlayer(getSqrsInbetweenSqrs(opponentKingSqrID, attackingPieceSqrID), opponentPlayer);
 
 	return opponentKingCantMoveOutOfCheck && attackingPieceCantBeCaptured && !attackersPathCanBeBlocked; 
 }
@@ -231,33 +290,41 @@ function promotePawnAtSqr(sqrID){
 	}
 }
 
-function removeOldAttackDataForMovingPiece(oldSqrID){
-	var movingPieceID = this.board2piece[oldSqrID],
-		oldSqrsUnderAttackByMovingPiece = getValidMoves.call(this, oldSqrID, true),
+function updateAttackDataForPiece(pieceID, removeData){
+	var sqrID = this.getSqrWithPiece(pieceID),
+		sqrsUnderAttackByPiece = getValidMoves.call(this, sqrID, true),
+		removeData = !removeData ? false : removeData,
 		thisObj = this;
 	R.forEach(function(sqrID){
-		if(thisObj.board2attacker[sqrID]){
-			thisObj.board2attacker[sqrID] = R.filter(function(pieceID){ return pieceID != movingPieceID; }, thisObj.board2attacker[sqrID]);
-			// Remove sqr from hash if it is no longer under attack
-			if(thisObj.board2attacker[sqrID].length == 0){
-				delete thisObj.board2attacker[sqrID];
+		// Are we removing data?
+		if(removeData){
+			// Is there data to remove?
+			if(thisObj.board2attacker[sqrID]){
+				thisObj.board2attacker[sqrID] = R.filter(function(attacker){ return attacker != pieceID; }, thisObj.board2attacker[sqrID]);
+				// Remove square from hash if it is no longer under attack
+				if(thisObj.board2attacker[sqrID].length == 0){
+					delete thisObj.board2attacker[sqrID];
+				}
 			}
+		// We are adding data. Is there no data already for this square?
+		}else if(!thisObj.board2attacker[sqrID]){
+			thisObj.board2attacker[sqrID] = [];
+			thisObj.board2attacker[sqrID].push(pieceID);
+		// We are adding data. Is this square missing attack data for this piece?
+		}else if(thisObj.board2attacker[sqrID].indexOf(pieceID) == -1){
+			thisObj.board2attacker[sqrID].push(pieceID);
 		}
-	}, oldSqrsUnderAttackByMovingPiece);
+	}, sqrsUnderAttackByPiece);
 }
 
-function addNewAttackDataForMovingPiece(newSqrID){
-	var movingPieceID = this.board2piece[newSqrID],
-		newSqrsUnderAttackByMovingPiece = getValidMoves.call(this, newSqrID, true),
+function updateAttackDataForPieces(pieces, removeOldData){
+	var removeOldData = !removeOldData ? false : removeOldData,
 		thisObj = this;
-	R.forEach(function(sqrID){
-		if(!thisObj.board2attacker[sqrID]){
-			thisObj.board2attacker[sqrID] = [];
-			thisObj.board2attacker[sqrID].push(movingPieceID);
-		}else if(thisObj.board2attacker[sqrID].indexOf(movingPieceID) == -1){
-			thisObj.board2attacker[sqrID].push(movingPieceID);
-		}
-	}, newSqrsUnderAttackByMovingPiece);
+
+	R.forEach(function(pieceID){
+		if(removeOldData) updateAttackDataForPiece.call(thisObj, pieceID, true);
+		updateAttackDataForPiece.call(thisObj, pieceID);
+	}, pieces);
 }
 
 function initBoard2Attacker(){
