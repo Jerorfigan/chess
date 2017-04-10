@@ -20,7 +20,8 @@ var settings = {
 
 	// Game settings
 
-	playerColor: "W"
+	humanPlayer: "W",
+	aiPlayer: "B"
 
 };
 

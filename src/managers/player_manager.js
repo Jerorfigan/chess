@@ -1,17 +1,15 @@
 var gameEvent = require("../game_event.js");
+var settings = require("../settings.js");
 
 var PlayerManager = function(boardManager){
 	this.boardManager = boardManager;
-	this.playerColor = "W";
-	this.lastSelectedSquareWithOwnedPiece = null;
+	this.player = settings.humanPlayer;
 
-	// Flags
-	this.isPlayerTurn = false;
+	this.lastSelectedSquareWithOwnedPiece = null;
+	this.lastSelectedPiece = null;
 
 	// Register for events
 	gameEvent.subscribe("BoardSquareSelected", onPlayerSelectedSquare, this);
-	gameEvent.subscribe("AIMovedPiece", onAIMovedPiece, this);
-	gameEvent.subscribe("GameStarted", onGameStarted, this);
 };
 
 module.exports = PlayerManager;
@@ -20,24 +18,19 @@ function onPlayerSelectedSquare(eventName, data){
 	var sqrID = data.sqrID;
 
 	// Ignore selection unless it's player turn
-	if(this.isPlayerTurn){
+	if(this.boardManager.whosTurnIsIt() == this.player){
 		// If player already has a square selected with owned piece...
-		if(this.lastSelectedSquareWithOwnedPiece){
+		if(this.lastSelectedSquareWithOwnedPiece && this.lastSelectedPiece){
 			// ...That is different than this newly selected square, then interpret this as a move to
 			// the newly selected square with the piece at the last square 
 			if(this.lastSelectedSquareWithOwnedPiece != sqrID){
 				// If player owns piece at square, interpret this as changing which piece is to be moved
-				if(this.boardManager.squareHasPlayerPiece(sqrID)){
-					this.lastSelectedSquareWithOwnedPiece = sqrID;
-					console.log("Player has selected square: " + sqrID);
-					gameEvent.fire("PieceSelected", {sqrID: sqrID, moves: this.boardManager.getMovesFrom(sqrID)});
+				if(this.boardManager.squareHasPlayerPiece(sqrID, this.player)){
+					selectPieceAtSqr.call(this, this.boardManager.getPieceAtSqr(sqrID), sqrID);
 				}
-				// Validate the move
+				// Is valid move?
 				else if(this.boardManager.isValidMove(this.lastSelectedSquareWithOwnedPiece, sqrID)){
-					this.boardManager.movePiece(this.lastSelectedSquareWithOwnedPiece, sqrID);
-					this.lastSelectedSquareWithOwnedPiece = null;
-					this.isPlayerTurn = false;
-					gameEvent.fire("PlayerMovedPiece");
+					moveLastSelectedPieceToSqrID.call(this, sqrID);
 				}else{
 					console.log("Invalid move.");
 				}
@@ -45,11 +38,8 @@ function onPlayerSelectedSquare(eventName, data){
 		}
 		// Else the player is in the process of selecting a square with owned piece, so check that there's 
 		// a piece belonging to the player on this square
-		else if(this.boardManager.squareHasPlayerPiece(sqrID)){
-			// Record their selected square with owned piece in anticipation of move
-			this.lastSelectedSquareWithOwnedPiece = sqrID;
-			console.log("Player has selected square: " + sqrID);
-			gameEvent.fire("PieceSelected", {sqrID: sqrID, moves: this.boardManager.getMovesFrom(sqrID)});
+		else if(this.boardManager.squareHasPlayerPiece(sqrID, this.player)){
+			selectPieceAtSqr.call(this, this.boardManager.getPieceAtSqr(sqrID), sqrID);
 		}else{
 			console.log("No owned piece at this square.");
 		}
@@ -58,10 +48,16 @@ function onPlayerSelectedSquare(eventName, data){
 	}
 }
 
-function onAIMovedPiece(eventName, data){
-	this.isPlayerTurn = true;
+function moveLastSelectedPieceToSqrID(sqrID){
+	this.boardManager.movePieceToSqr(this.lastSelectedPiece, sqrID);
+	this.lastSelectedSquareWithOwnedPiece = null;
+	this.lastSelectedPiece = null;
+	gameEvent.fire("PlayerMovedPiece");
 }
 
-function onGameStarted(eventName, data){
-	this.isPlayerTurn = true;
+function selectPieceAtSqr(pieceID, sqrID){
+	this.lastSelectedSquareWithOwnedPiece = sqrID;
+	this.lastSelectedPiece = pieceID;
+	console.log("Player has selected " + pieceID + " at square: " + sqrID);
+	gameEvent.fire("PieceSelected", {pieceID: pieceID, sqrID: sqrID, moves: this.boardManager.getSqrsPieceCan(pieceID)});
 }
