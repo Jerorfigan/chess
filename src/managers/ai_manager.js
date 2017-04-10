@@ -15,13 +15,14 @@ module.exports = AIManager;
 
 function aiTakeTurn(){
 	// Simple random move algorithm to start with
-	var excludedPieces = [];
+	var excludedPieces = [],
+		chosenSqr = null,
+		limit = 0;
 
 	do{
 		// Select a random non-captured piece, and remember which pieces we've tried to move so we
 		// don't keep trying to move a piece that has no valid moves
-		var chosenSqr = null,
-			nonCapturedPieces = this.boardManager.getAllPiecesForPlayer(this.player, "UNCAPTURED", excludedPieces);
+		var nonCapturedPieces = this.boardManager.getAllPiecesForPlayer(this.player, "UNCAPTURED", excludedPieces);
 		if(nonCapturedPieces.length == 0){
 			console.log("AI could not find valid move");
 			break;
@@ -29,11 +30,19 @@ function aiTakeTurn(){
 		var chosenPiece = nonCapturedPieces[Math.floor(nonCapturedPieces.length * Math.random())];
 		excludedPieces.push(chosenPiece);
 
-		// Select a random valid move for this piece, if it has one
+		// Select the first valid move for this piece, if it has one
 		var moves = this.boardManager.getSqrsPieceCan(chosenPiece);
-		chosenSqr = moves.length > 0 ? moves[Math.floor(moves.length * Math.random())] : null;
-		// Still need to validate move in case AI is in check
-		if(chosenSqr && !this.boardManager.canPieceMoveToSqr(chosenPiece, chosenSqr)) chosenSqr = null;
+		for(var i = 0; i < moves.length; i++){
+			// Validate move in case AI is in check
+			if(this.boardManager.canPieceMoveToSqr(chosenPiece, moves[i])){
+				chosenSqr = moves[i];
+				break;
+			}
+		}
+		limit++;
+		if(limit > 2000){
+			throw "Infinite loop prevented";
+		}
 	}while(!chosenSqr);
 	
 	if(chosenSqr){

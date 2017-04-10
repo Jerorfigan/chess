@@ -186,7 +186,8 @@ BoardManager.prototype.getSqrsPieceCan = function(pieceID, action){
 					rankOffset = 0;
 				break;
 			}
-			var offset = {fileOffset: fileOffset, rankOffset: rankOffset};
+			var offset = {fileOffset: fileOffset, rankOffset: rankOffset},
+				limit = 0;
 			while(
 				isValidOffset(offset)
 			)
@@ -201,6 +202,10 @@ BoardManager.prototype.getSqrsPieceCan = function(pieceID, action){
 					break;
 				}
 				offset = {fileOffset: fileOffset, rankOffset: rankOffset};
+				limit++;
+				if(limit > 1000){
+					throw "Infinite loop prevented";
+				}
 			}
 		}
 	} 
@@ -400,7 +405,10 @@ BoardManager.prototype.getAllMovesForPlayer = function(player){
 		thisObj = this;
 
 	R.forEach(function(pieceID){
-		moves.push({"pieceID": pieceID, "moves": thisObj.getSqrsPieceCan(pieceID)});
+		var movesForPiece = thisObj.getSqrsPieceCan(pieceID);
+		if(movesForPiece.length > 0){
+			moves.push({"pieceID": pieceID, "moves": movesForPiece});
+		}
 	}, pieces);
 
 	return moves;
@@ -818,7 +826,8 @@ function getSqrsInbetweenSqrs(sqr1ID, sqr2ID){
 	}else{
 		var fileCode = sqr1file < sqr2file ? sqr1file.charCodeAt(0) + 1 : sqr2file.charCodeAt(0) + 1,
 			rankDelta = sqr1file < sqr2file ? (sqr1rank > sqr2rank ? -1 : 1) : (sqr1rank > sqr2rank ? 1 : -1),
-			rank = sqr1file < sqr2file ? parseInt(sqr1rank) + rankDelta: parseInt(sqr2rank) + rankDelta;
+			rank = sqr1file < sqr2file ? parseInt(sqr1rank) + rankDelta: parseInt(sqr2rank) + rankDelta,
+			limit = 0;
 		while(
 			(String.fromCharCode(fileCode) + rank) != sqr2ID &&  
 			(String.fromCharCode(fileCode) + rank) != sqr1ID 
@@ -826,6 +835,10 @@ function getSqrsInbetweenSqrs(sqr1ID, sqr2ID){
 			inbetweenSqrs.push(String.fromCharCode(fileCode) + rank);
 			fileCode++;
 			rank = rank + rankDelta;
+			limit++;
+			if(limit > 1000){
+				throw "Infinite loop prevented";
+			}
 		}
 	}
 
@@ -909,7 +922,7 @@ function hasCheckmateOccurred(){
 
 		pieceAttackingKingCantBeBlocked = 
 
-			(pieceAttackingKingType != "Q" && pieceAttackingKingType != "B" && pieceAttackingKingType == "R") || 
+			(pieceAttackingKingType != "Q" && pieceAttackingKingType != "B" && pieceAttackingKingType != "R") || 
 			
 			!this.areAnyOfTheseSqrsUnderAttackByPlayer(getSqrsInbetweenSqrs(kingUnderAttackSqrID, pieceAttackingKingSqrID), playerMovingNext);
 
@@ -976,7 +989,8 @@ function promotePawn(pieceID, speculating){
 
 	var owner = this.getPieceOwner(pieceID),
 		sqrID = this.getSqrWithPiece(sqrID),
-		choice = "";
+		choice = "",
+		limit = 0;
 
 	if(!speculating && owner == settings.humanPlayer){
 		var promotions = ["Q", "N", "R", "B"];
@@ -985,6 +999,10 @@ function promotePawn(pieceID, speculating){
 			choice = prompt("Which piece would you like to promote your pawn at " + sqrID + " to? Q,N,R or B?");
 			choice = choice.trim();
 			if(promotions.indexOf(choice == -1)) console.log("Invalid choice.");
+			limit++;
+			if(limit > 1000){
+				throw "Infinite loop prevented";
+			}
 		}
 	}else{
 		choice = "Q";
