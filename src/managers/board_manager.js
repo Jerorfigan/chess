@@ -816,11 +816,11 @@ function getSqrsInbetweenSqrs(sqr1ID, sqr2ID){
 		sqr2rank = getSqrRank(sqr2ID);
 
 	if(sqr1file == sqr2file){
-		for(var rank = sqr1rank < sqr2rank ? sqr1rank : sqr2rank; rank < (sqr1rank < sqr2rank ? sqr2rank : sqr1rank); rank++){
+		for(var rank = sqr1rank < sqr2rank ? sqr1rank + 1 : sqr2rank + 1; rank < (sqr1rank < sqr2rank ? sqr2rank : sqr1rank); rank++){
 			inbetweenSqrs.push(sqr1file + rank);
 		}
 	}else if(sqr1rank == sqr2rank){
-		for(var file = sqr1file < sqr2file ? sqr1file : sqr2file; file < (sqr1file < sqr2file ? sqr2file : sqr1file); file++){
+		for(var file = sqr1file < sqr2file ? sqr1file + 1 : sqr2file + 1; file < (sqr1file < sqr2file ? sqr2file : sqr1file); file++){
 			inbetweenSqrs.push(file + sqr1rank);
 		}
 	}else{
