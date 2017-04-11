@@ -455,23 +455,27 @@ BoardManager.prototype.canPieceMoveToSqr = function(pieceID, toSqrID){
  * Get the pieces belonging to the specified player attacking the specified square.
  * @param {string} player the player identifier
  * @param {string} attackedSqrID the squard ID of the attacked square
+ * @param {array} excludingPieces array of piece IDs to exclude from the assessment
  */
-BoardManager.prototype.getPlayerPiecesAttackingSquare = function(player, attackedSqrID){
-	var thisObj = this;
+BoardManager.prototype.getPlayerPiecesAttackingSquare = function(player, attackedSqrID, excludingPieces){
+	var excludingPieces = !excludingPieces ? [] : excludingPieces,
+		thisObj = this;
 
 	return this.board2attacker[attackedSqrID] ? 
-		R.filter(function(attackingPieceID){ return thisObj.getPieceOwner(attackingPieceID) == player; }, this.board2attacker[attackedSqrID]) :
+		R.filter(function(attackingPieceID){ return thisObj.getPieceOwner(attackingPieceID) == player && excludingPieces.indexOf(attackingPieceID) == -1; }, this.board2attacker[attackedSqrID]) :
 		[];
 };
 
 /**
  * Get the pieces attacking the specified piece.
  * @param {string} attackedPieceID the piece ID of the attacked piece
+ * @param {array} excludingPieces array of piece IDs to exclude from the assessment
  */
-BoardManager.prototype.getPiecesAttackingPiece = function(attackedPieceID){
-	var attackedPieceSqrID = this.getSqrWithPiece(attackedPieceID),
+BoardManager.prototype.getPiecesAttackingPiece = function(attackedPieceID, excludingPieces){
+	var excludingPieces = !excludingPieces ? [] : excludingPieces,
+		attackedPieceSqrID = this.getSqrWithPiece(attackedPieceID),
 		attackingPlayer = this.getOtherPlayer(this.getPieceOwner(attackedPieceID)),
-		attackers = this.getPlayerPiecesAttackingSquare(attackingPlayer, attackedPieceSqrID);
+		attackers = this.getPlayerPiecesAttackingSquare(attackingPlayer, attackedPieceSqrID, excludingPieces);
 
 	return attackers ? attackers : [];
 };
@@ -480,15 +484,17 @@ BoardManager.prototype.getPiecesAttackingPiece = function(attackedPieceID){
  * Returns true if any of the specified squares are under attack by the specified player.
  * @param {array} sqrs the array of square IDs to check if under attack
  * @param {string} player the player identifier of the player to check if attacking squares
+ * @param {array} excludingPieces array of piece IDs to exclude from the assessment
  */
-BoardManager.prototype.areAnyOfTheseSqrsUnderAttackByPlayer = function(sqrs, player){
-	var thisObj = this;
+BoardManager.prototype.areAnyOfTheseSqrsUnderAttackByPlayer = function(sqrs, player, excludingPieces){
+	var excludingPieces = !excludingPieces ? [] : excludingPieces,
+		thisObj = this;
 	(function(sqrs){
 		if(sqrs.constructor !== Array) throw "Expected Array for 'sqrs' parameter";
 	})(sqrs);
 
 	return R.any(function(sqrID){
-		return thisObj.getPlayerPiecesAttackingSquare(player, sqrID).length != 0;
+		return thisObj.getPlayerPiecesAttackingSquare(player, sqrID, excludingPieces).length != 0;
 	}, sqrs);
 };
 
@@ -802,7 +808,29 @@ function getSqrRank(sqrID, asNumeral){
 }
 
 /**
- * Get the squares inbetween (not inclusive) the specified squares.
+ * Maps a square ID to a coordinate pair, with the origin being at the bottom-left hand-side of the board.
+ * Examples:
+ * a5 => {x: 1, y: 5}
+ * c7 => {x: 3, y: 7}
+ * @param {string} sqrID the square ID
+ */
+function sqrID2coord(sqrID){
+	return {x: getSqrFile(sqrID, true), y: getSqrRank(sqrID, true)};
+}
+
+/**
+ * Maps a coordinate pair to a square ID, with the origin being at the bottom-left hand-side of the board.
+ * Examples:
+ * {x: 1, y: 5} => a5
+ * {x: 3, y: 7} => c7
+ * @param {object} coord {x: <x coord representing file>, y: <y coord representing row>}
+ */
+function coord2sqrID(coord){
+	return getFileFromNumeral(coord.x) + coord.y;
+}
+
+/**
+ * Get the squares inbetween (not inclusive) the specified squares. Assumes incoming squares are on the same rank, file or diagonal.
  * @param {string} sqr1ID the square ID of square 1
  * @param {string} sqr2ID the square ID of square 2
  */
@@ -811,36 +839,16 @@ function getSqrsInbetweenSqrs(sqr1ID, sqr2ID){
 	validateSqrID(sqr2ID);
 
 	var inbetweenSqrs = [],
-		sqr1file = getSqrFile(sqr1ID),
-		sqr1rank = getSqrRank(sqr1ID),
-		sqr2file = getSqrFile(sqr2ID),
-		sqr2rank = getSqrRank(sqr2ID);
+		sqr1Coord = sqrID2coord(sqr1ID),
+		sqr2Coord = sqrID2coord(sqr2ID),
+		// Find the pseudo-magnitude and pseudo-unit vector from 1 to 2 normalized to square deltas
+		pseudoMagnitude = Math.max(Math.abs(sqr2Coord.x - sqr1Coord.x), Math.abs(sqr2Coord.y - sqr1Coord.y)),
+		pseudoUnitVecFrom1to2 = pseudoMagnitude > 0 ? {x: (sqr2Coord.x - sqr1Coord.x) / pseudoMagnitude, y: (sqr2Coord.y - sqr1Coord.y) / pseudoMagnitude} : {x: 0, y: 0};
 
-	if(sqr1file == sqr2file){
-		for(var rank = sqr1rank < sqr2rank ? sqr1rank + 1 : sqr2rank + 1; rank < (sqr1rank < sqr2rank ? sqr2rank : sqr1rank); rank++){
-			inbetweenSqrs.push(sqr1file + rank);
-		}
-	}else if(sqr1rank == sqr2rank){
-		for(var file = sqr1file < sqr2file ? sqr1file + 1 : sqr2file + 1; file < (sqr1file < sqr2file ? sqr2file : sqr1file); file++){
-			inbetweenSqrs.push(file + sqr1rank);
-		}
-	}else{
-		var fileCode = sqr1file < sqr2file ? sqr1file.charCodeAt(0) + 1 : sqr2file.charCodeAt(0) + 1,
-			rankDelta = sqr1file < sqr2file ? (sqr1rank > sqr2rank ? -1 : 1) : (sqr1rank > sqr2rank ? 1 : -1),
-			rank = sqr1file < sqr2file ? parseInt(sqr1rank) + rankDelta: parseInt(sqr2rank) + rankDelta,
-			limit = 0;
-		while(
-			(String.fromCharCode(fileCode) + rank) != sqr2ID &&  
-			(String.fromCharCode(fileCode) + rank) != sqr1ID 
-		){
-			inbetweenSqrs.push(String.fromCharCode(fileCode) + rank);
-			fileCode++;
-			rank = rank + rankDelta;
-			limit++;
-			if(limit > 1000){
-				throw "Infinite loop prevented";
-			}
-		}
+	for(var multiplier = 1; multiplier < pseudoMagnitude; multiplier++){
+		inbetweenSqrs.push(
+			coord2sqrID({x: sqr1Coord.x + pseudoUnitVecFrom1to2.x * multiplier, y: sqr1Coord.y + pseudoUnitVecFrom1to2.y * multiplier})
+		);
 	}
 
 	return inbetweenSqrs;
@@ -949,7 +957,7 @@ function hasCheckmateOccurred(){
 
 			(pieceAttackingKingType != "Q" && pieceAttackingKingType != "B" && pieceAttackingKingType != "R") || 
 			
-			!this.areAnyOfTheseSqrsUnderAttackByPlayer(getSqrsInbetweenSqrs(kingUnderAttackSqrID, pieceAttackingKingSqrID), playerMovingNext);
+			!this.areAnyOfTheseSqrsUnderAttackByPlayer(getSqrsInbetweenSqrs(kingUnderAttackSqrID, pieceAttackingKingSqrID), playerMovingNext, [kingUnderAttackPieceID]);
 
 	return kingUnderAttackCantMoveOutOfCheck && pieceAttackingKingCantBeCaptured && pieceAttackingKingCantBeBlocked; 
 }
@@ -980,8 +988,7 @@ function hasStalemateOccured(){
 			(playerMovingNextPieceCnt.total == 2 && playerMovingNextPieceCnt.knights == 1) ||
 			(playerMovingNextPieceCnt.total == 2 && playerMovingNextPieceCnt.bishops == 1);
 
-	return 
-		(onlyOneKnightOrOneBishopLeftForPlayerWhoMovedLast && onlyOneKnightOrOneBishopLeftForPlayerMovingNext) ||
+	return (onlyOneKnightOrOneBishopLeftForPlayerWhoMovedLast && onlyOneKnightOrOneBishopLeftForPlayerMovingNext) || 
 		playerMovingNextNotInCheckAndHasNoValidMoves;
 }
 
