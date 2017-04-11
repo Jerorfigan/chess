@@ -433,7 +433,8 @@ BoardManager.prototype.isValidMove = function(fromSqrID, toSqrID){
 		return R.contains(toSqrID, this.getSqrsPieceCan(pieceID)) && 
 			isPlayerOutOfCheckAfterMove.call(this, player, pieceID, toSqrID);
 	}else{
-		return R.contains(toSqrID, this.getSqrsPieceCan(pieceID));
+		return R.contains(toSqrID, this.getSqrsPieceCan(pieceID)) &&
+			!isPlayerInCheckAfterMove.call(this, player, pieceID, toSqrID);
 	}
 };
 
@@ -887,6 +888,30 @@ function isPlayerOutOfCheckAfterMove(player, pieceID, toSqrID){
 	return playerIsOutOfCheckAfterMove;
 }
 
+/**
+ * Returns true if the player is in check after the specified move, false otherwise.
+ * @param {string} player the player identifier
+ * @param {string} pieceID the piece ID of the piece to move
+ * @param {string} toSqrID the square ID of the square to move the piece to
+ */
+function isPlayerInCheckAfterMove(player, pieceID, toSqrID){
+	// Save the board state
+	var boardState = this.saveBoardState(),
+		playerIsCheckAfterMove = false;
+
+	// Make the move, and set speculating flag to yes, so we suppress console output and events
+	this.movePieceToSqr(pieceID, toSqrID, true);
+
+	// Is player in check after the move?
+	if(isPlayerInCheck.call(this, player)){
+		playerIsCheckAfterMove = true;
+	}
+
+	// Restore board state
+	this.loadBoardState(boardState);
+
+	return playerIsCheckAfterMove;
+}
 
 /**
  * Returns true if a checkmate has occurred.
