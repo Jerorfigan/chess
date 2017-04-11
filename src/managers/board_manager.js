@@ -1013,7 +1013,7 @@ function promotePawn(pieceID, speculating){
 	validatePieceID(pieceID);
 
 	var owner = this.getPieceOwner(pieceID),
-		sqrID = this.getSqrWithPiece(sqrID),
+		sqrID = this.getSqrWithPiece(pieceID),
 		choice = "",
 		limit = 0;
 
