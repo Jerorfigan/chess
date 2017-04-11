@@ -509,7 +509,7 @@ BoardManager.prototype.areAnyOfTheseSqrsUnderAttackByPlayer = function(sqrs, pla
 BoardManager.prototype.getSqrWithPiece = function(pieceID){
 	validatePieceID(pieceID);
 
-	return this.pieces[pieceID].sqrID;
+	return this.pieces[pieceID] ? this.pieces[pieceID].sqrID : null;
 };
 
 /**
