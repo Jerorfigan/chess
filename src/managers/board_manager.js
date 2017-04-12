@@ -108,30 +108,30 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 	}
 
 	// We may have opened up new attacks or closed off old attacks for strafing pieces (Queen, Bishop and Rook), so update their attack data as well
-	var strafingPieces = this.getAllPiecesForPlayer(playerMovingPiece, "UNCAPTURED", ["P", "N", "K"]);
-	updateAttackDataForPieces.call(this, strafingPieces);
+	var allyStrafingPieces = this.getAllPiecesForPlayer(playerMovingPiece, "UNCAPTURED", ["P", "N", "K", pieceID]);
+	updateAttackDataForPieces.call(this, allyStrafingPieces);
+	var enemyStrafingPieces = this.getAllPiecesForPlayer(opponent, "UNCAPTURED", ["P", "N", "K"]);
+	updateAttackDataForPieces.call(this, enemyStrafingPieces);
 
 	if(!speculating){
 		gameEvent.fire("BoardUpdated", {pieces: this.board2piece});
 	}
 
-	// Check for end of game conditions
-	if(isPlayerInCheck.call(this, opponent) && hasCheckmateOccurred.call(this)){
-		if(!speculating){
+	if(!speculating){
+		// Check for end of game conditions
+		if(isPlayerInCheck.call(this, opponent) && hasCheckmateOccurred.call(this)){
 			console.log("Checkmate. " + playerMovingPiece + " wins.");
 			gameEvent.fire("Checkmate", {winningPlayer: playerMovingPiece});
 			return;
-		}
-	}else if(hasStalemateOccured.call(this)){
-		if(!speculating){
+		}else if(hasStalemateOccured.call(this)){
 			console.log("Stalemate.");
 			gameEvent.fire("Stalemate");
 			return;
 		}
-	}
 
-	// Increment turn, needs to be the last thing we do
-	this.turnID++;
+		// Increment turn, needs to be the last thing we do
+		this.turnID++;
+	}
 };
 
 /**
