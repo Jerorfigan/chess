@@ -9,9 +9,6 @@ var STARTING_SQRS = {
 
 var BoardManager = function(){	
 	this.resetBoard();
-
-	// Register for events
-	gameEvent.fire("BoardSetup", {pieces: this.board2piece});
 };
 
 /*********/
@@ -31,6 +28,8 @@ BoardManager.prototype.resetBoard = function(){
 
 	// Init turn counter
 	this.turnID = 1;
+
+	gameEvent.fire("BoardSetup", {pieces: this.board2piece});
 };
 
 /**************************************/
