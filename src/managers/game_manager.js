@@ -32,7 +32,7 @@ function onGameOver(){
 
 	while(validAns.indexOf(choice) == -1){
 		choice = prompt(query);
-		console.log("Invalid choice");
+		if(validAns.indexOf(choice) == -1) console.log("Invalid choice");
 	}
 
 	if(choice == "Y"){
