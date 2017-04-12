@@ -10,8 +10,8 @@ var GameManager = function(){
 	this.fx = new FX(onGraphicsLoaded, this);
 
 	// Register for events
-	gameEvent.subscribe("Checkmate", resetGame, this);
-	gameEvent.subscribe("Stalemate", resetGame, this);
+	gameEvent.subscribe("Checkmate", onGameOver, this);
+	gameEvent.subscribe("Stalemate", onGameOver, this);
 };
 
 module.exports = GameManager;
@@ -25,8 +25,18 @@ function onGraphicsLoaded(){
 	gameEvent.fire("GameStarted");
 }
 
-function resetGame(){
-	this.boardManager = new BoardManager();
+function onGameOver(){
+	var query = "New game? Y/N",
+		choice = "",
+		validAns = ["Y","N"];
 
-	gameEvent.fire("GameStarted");
+	while(validAns.indexOf(choice) == -1){
+		choice = prompt(query);
+		console.log("Invalid choice");
+	}
+
+	if(choice == "Y"){
+		this.boardManager.resetBoard();
+		gameEvent.fire("GameStarted");
+	}
 }

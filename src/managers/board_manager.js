@@ -8,6 +8,17 @@ var STARTING_SQRS = {
 };
 
 var BoardManager = function(){	
+	this.resetBoard();
+
+	// Register for events
+	gameEvent.fire("BoardSetup", {pieces: this.board2piece});
+};
+
+/*********/
+/* Reset */
+/*********/
+
+BoardManager.prototype.resetBoard = function(){
 	// Init maps
 	this.pieces = {};
 	initPieces.call(this);
@@ -20,9 +31,6 @@ var BoardManager = function(){
 
 	// Init turn counter
 	this.turnID = 1;
-
-	// Register for events
-	gameEvent.fire("BoardSetup", {pieces: this.board2piece});
 };
 
 /**************************************/
@@ -55,8 +63,8 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 		var capturedPieceID = this.getPieceAtSqr(toSqrID);
 		removePieceFromBoard.call(this, capturedPieceID);
 		if(!speculating){
-			gameEvent.fire("PieceCaptured", {capturedPieceID: capturedPieceID, sqrID: toSqrID});
 			console.log(pieceID + " captures " + capturedPieceID);
+			gameEvent.fire("PieceCaptured", {capturedPieceID: capturedPieceID, sqrID: toSqrID});
 		}
 	// Did we performed an En passant capture?
 	}else if(this.getPieceType(pieceID) == "P" && getSqrFile(fromSqrID) != getSqrFile(toSqrID)){
@@ -67,8 +75,8 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 		var capturedPieceID = this.getPieceAtSqr(targetOfEnPassantAttackSqrID);
 		removePieceFromBoard.call(this, capturedPieceID);
 		if(!speculating){
-			gameEvent.fire("PieceCaptured", {capturedPieceID: capturedPieceID, sqrID: targetOfEnPassantAttackSqrID});
 			console.log(movingPieceID + " captures " + capturedPieceID);
+			gameEvent.fire("PieceCaptured", {capturedPieceID: capturedPieceID, sqrID: targetOfEnPassantAttackSqrID});
 		}
 	// Did we castle?
 	}else if(this.getPieceType(pieceID) == "K" && Math.abs(getSqrFile(fromSqrID, true) - getSqrFile(toSqrID, true)) == 2){
@@ -110,13 +118,15 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 	// Check for end of game conditions
 	if(isPlayerInCheck.call(this, opponent) && hasCheckmateOccurred.call(this)){
 		if(!speculating){
-			gameEvent.fire("Checkmate", {winningPlayer: playerMovingPiece});
 			console.log("Checkmate. " + playerMovingPiece + " wins.");
+			gameEvent.fire("Checkmate", {winningPlayer: playerMovingPiece});
+			return;
 		}
 	}else if(hasStalemateOccured.call(this)){
 		if(!speculating){
-			gameEvent.fire("Stalemate");
 			console.log("Stalemate.");
+			gameEvent.fire("Stalemate");
+			return;
 		}
 	}
 
@@ -1028,7 +1038,7 @@ function promotePawn(pieceID, speculating){
 		var promotions = ["Q", "N", "R", "B"];
 
 		while(promotions.indexOf(choice) == -1){
-			choice = prompt("Which piece would you like to promote your pawn at " + sqrID + " to? Q,N,R or B?");
+			choice = prompt("Which piece would you like to promote your pawn at " + sqrID + " to? Q/N/R/B");
 			choice = choice.trim();
 			if(promotions.indexOf(choice == -1)) console.log("Invalid choice.");
 			limit++;
