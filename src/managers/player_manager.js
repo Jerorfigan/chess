@@ -52,7 +52,6 @@ function moveLastSelectedPieceToSqrID(sqrID){
 	this.boardManager.movePieceToSqr(this.lastSelectedPiece, sqrID);
 	this.lastSelectedSquareWithOwnedPiece = null;
 	this.lastSelectedPiece = null;
-	gameEvent.fire("PlayerMovedPiece");
 }
 
 function selectPieceAtSqr(pieceID, sqrID){

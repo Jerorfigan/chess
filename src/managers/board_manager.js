@@ -130,6 +130,7 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 
 		// Increment turn, needs to be the last thing we do
 		this.turnID++;
+		gameEvent.fire("NextTurn");
 	}
 };
 

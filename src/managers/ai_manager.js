@@ -7,7 +7,7 @@ var AIManager = function(boardManager){
 	this.player = settings.aiPlayer;
 
 	// Register for events
-	gameEvent.subscribe("PlayerMovedPiece", aiTakeTurn, this);
+	gameEvent.subscribe("NextTurn", onNextTurn, this);
 	gameEvent.subscribe("GameStarted", onGameStarted, this);
 };
 
@@ -47,7 +47,12 @@ function aiTakeTurn(){
 	
 	if(chosenSqr){
 		this.boardManager.movePieceToSqr(chosenPiece, chosenSqr);
-		gameEvent.fire("AIMovedPiece");
+	}
+}
+
+function onNextTurn(eventName, data){
+	if(this.boardManager.whosTurnIsIt() == this.player){
+		aiTakeTurn.call(this);
 	}
 }
 
