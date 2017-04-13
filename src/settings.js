@@ -20,8 +20,8 @@ var settings = {
 
 	// Game settings
 
-	humanPlayer: "W",
-	aiPlayer: "B"
+	humanPlayer: "B",
+	aiPlayer: "W"
 
 };
 

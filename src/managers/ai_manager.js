@@ -58,6 +58,6 @@ function onNextTurn(eventName, data){
 
 function onGameStarted(eventName, data){
 	if(this.boardManager.whosTurnIsIt() == this.player){
-		this.aiTakeTurn();
+		aiTakeTurn.call(this);
 	}
 }
