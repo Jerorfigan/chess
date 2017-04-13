@@ -148,12 +148,46 @@ PieceFX.prototype.renderPieces = function(boardState){
 	this.renderer.render(this.stage);
 };
 
+/* DEBUG FUNCTION */
+PieceFX.prototype.renderPieceAttacks = function(board2attacker){
+	var boardFX = this.boardFX,
+	    sqrWidth = boardFX.getSqrWidth(),
+	    pieceColors = {"Q": "#db5e64", "R": "#cea152", "B": "#448faa", "N": "#c238c4", "K": "#33c69d"};
+		thisObj = this;
+
+	R.forEachObjIndexed(function(attackers, sqrID){
+		var yOffset = -sqrWidth / 2;
+
+		R.forEach(function(attacker){
+			var style = new PIXI.TextStyle({
+				    fontFamily: 'Arial',
+				    fontSize: 11,
+				    fill: pieceColors[attacker.charAt(1)] ? pieceColors[attacker.charAt(1)] : '#48db4f',
+				    wordWrap: true,
+				}),
+				attackText = new PIXI.Text(attacker, style),
+				canvasLoc = boardFX.getCanvasLocFromSqrID(sqrID);
+
+			attackText.x = canvasLoc.x - 10;
+			attackText.y = canvasLoc.y + yOffset;
+
+			yOffset += 12;
+
+			thisObj.piecesContainer.addChild(attackText);
+		}, attackers);
+	}, board2attacker);
+
+	this.renderer.render(this.stage);
+};
+
 module.exports = PieceFX;
 
 function onBoardSetup(eventName, data){
 	this.renderPieces(data.pieces);
+	this.renderPieceAttacks(data.board2attacker)
 }
 
 function onBoardUpdated(eventName, data){
 	this.renderPieces(data.pieces);
+	this.renderPieceAttacks(data.board2attacker)
 }

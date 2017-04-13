@@ -29,7 +29,7 @@ BoardManager.prototype.resetBoard = function(){
 	// Init turn counter
 	this.turnID = 1;
 
-	gameEvent.fire("BoardSetup", {pieces: this.board2piece});
+	gameEvent.fire("BoardSetup", {pieces: this.board2piece, board2attacker: this.board2attacker});
 };
 
 /**************************************/
@@ -113,7 +113,7 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 	updateAttackDataForPieces.call(this, enemyStrafingPieces);
 
 	if(!speculating){
-		gameEvent.fire("BoardUpdated", {pieces: this.board2piece});
+		gameEvent.fire("BoardUpdated", {pieces: this.board2piece, board2attacker: this.board2attacker});
 	}
 
 	if(!speculating){
