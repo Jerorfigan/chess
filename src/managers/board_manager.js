@@ -122,7 +122,6 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 		gameEvent.fire("BoardUpdated", {pieces: this.board2piece, board2attacker: this.board2attacker});
 	}
 
-	
 	// Check for end of game conditions
 	if(isPlayerInCheck.call(this, opponent) && hasCheckmateOccurred.call(this)){
 		if(!speculating){
@@ -136,6 +135,11 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 			gameEvent.fire("Stalemate");
 		}
 		return {checkmate: false, stalemate: true};
+	}else if(isPlayerInCheck.call(this, opponent)){
+		if(!speculating){
+			// Alert player who is in check
+			console.log(opponent + " is in check");
+		}
 	}
 
 	// Increment turn, needs to be the last thing we do
