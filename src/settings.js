@@ -20,9 +20,16 @@ var settings = {
 
 	// Game settings
 
-	humanPlayer: "B",
-	aiPlayer: "W"
+	humanPlayer: "W",
+	aiPlayer: "B",
 
+	// AI settings
+	aiSkillLevel: 1,									// 1 (novice), 2 (intermediate), 3 (expert)
+	piecePointValueQueen: 4,
+	piecePointValueBishop: 2,
+	piecePointValueKnight: 2,
+	piecePointValueRook: 3,
+	piecePointValuePawn: 1
 };
 
 module.exports = settings;

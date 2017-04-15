@@ -37,13 +37,16 @@ BoardManager.prototype.resetBoard = function(){
 /**************************************/
 
 /**
- * Moves the piece the specified piece to the specified square.
+ * Moves the piece the specified piece to the specified square. Returns true if this move causes the game to end, false otherwise.
  * @param {string} pieceID the piece ID of the piece
  * @param {string} toSqrID the square ID of the square
  * @param {boolean} speculating true, to signify that this is a speculative move, not an actual move, and to suppress console
  * 								logging and events. False by default.
  */
 BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
+	validatePieceID(pieceID);
+	validateSqrID(toSqrID);
+
 	var fromSqrID = this.getSqrWithPiece(pieceID),
 		playerMovingPiece = this.getPieceOwner(pieceID),
 		playerTitle = playerMovingPiece == settings.humanPlayer ? "Player" : "AI",
@@ -82,7 +85,7 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 		var castleKingside = getSqrFile(fromSqrID, true) - getSqrFile(toSqrID, true) < 0,
 			rookPieceID = castleKingside ? playerMovingPiece + "Rh" : playerMovingPiece + "Ra",
 			rookSqrIDAfterCastling = castleKingside ? getFileFromNumeral(getSqrFile(toSqrID, true) - 1) + getSqrRank(toSqrID) :
-				String.fromCharCode(getSqrFile(toSqrID, true) + 1) + getSqrRank(toSqrID);
+				getFileFromNumeral(getSqrFile(toSqrID, true) + 1) + getSqrRank(toSqrID);
 
 		removePieceFromBoard.call(this, rookPieceID);
 		addPieceToBoardAtSqr.call(this, rookPieceID, rookSqrIDAfterCastling);
@@ -116,22 +119,29 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 		gameEvent.fire("BoardUpdated", {pieces: this.board2piece, board2attacker: this.board2attacker});
 	}
 
-	if(!speculating){
-		// Check for end of game conditions
-		if(isPlayerInCheck.call(this, opponent) && hasCheckmateOccurred.call(this)){
+	
+	// Check for end of game conditions
+	if(isPlayerInCheck.call(this, opponent) && hasCheckmateOccurred.call(this)){
+		if(!speculating){
 			console.log("Checkmate. " + playerMovingPiece + " wins.");
 			gameEvent.fire("Checkmate", {winningPlayer: playerMovingPiece});
-			return;
-		}else if(hasStalemateOccured.call(this)){
+		}
+		return true;
+	}else if(hasStalemateOccured.call(this)){
+		if(!speculating){
 			console.log("Stalemate.");
 			gameEvent.fire("Stalemate");
-			return;
 		}
+		return true;
+	}
 
-		// Increment turn, needs to be the last thing we do
-		this.turnID++;
+	// Increment turn, needs to be the last thing we do
+	this.turnID++;
+	if(!speculating){
 		gameEvent.fire("NextTurn");
 	}
+
+	return false;
 };
 
 /**
@@ -755,6 +765,7 @@ function removePieceFromBoard(pieceID){
 
 function addPieceToBoardAtSqr(pieceID, sqrID){
 	validatePieceID(pieceID);
+	validateSqrID(sqrID);
 	(function(){
 		if(this.getSqrWithPiece(pieceID) != null) throw "Piece already found on board";
 	}).call(this);
@@ -1180,7 +1191,7 @@ function validatePieceID(pieceID){
 		(pieceID.length == 4 && pieces.indexOf(pieceID.substr(1, 2)) == -1) ||
 		(pieceID.length == 4 && promotions.indexOf(pieceID.substr(-1)) == -1)
 	){
-		throw "Invalid piece ID";
+		throw "Invalid piece ID: " + pieceID;
 	}
 }
 
@@ -1195,7 +1206,7 @@ function validateSqrID(sqrID){
 		(sqrID.charCodeAt(0) < 97 || sqrID.charCodeAt(0) > 104) ||
 		(isNaN(parseInt(sqrID.charAt(1))) || parseInt(sqrID.charAt(1)) < 1 || parseInt(sqrID.charAt(1)) > 8)
 	){
-		throw "Invalid square ID";
+		throw "Invalid square ID: " + sqrID;
 	}
 }
 
@@ -1205,6 +1216,6 @@ function validateSqrID(sqrID){
  */
 function validatePlayer(player){
 	if(player != "W" && player != "B"){
-		throw "Invalid player";
+		throw "Invalid player: " + player;
 	}
 }
