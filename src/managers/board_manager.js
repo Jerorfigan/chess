@@ -376,7 +376,8 @@ BoardManager.prototype.getSqrsPieceCan = function(pieceID, action){
 						attackingPieceSqrID = attackingPiecesThatCanStrafe.length > 0 ? this.getSqrWithPiece(attackingPiecesThatCanStrafe[0]) : null,
 						strafeAttackOffset = attackingPieceSqrID ? getStrafeAttackOffset(attackingPieceSqrID) : null;
 
-					if(
+					if( 
+						action == "DEFEND" ||
 						// Makes sure king is not moving into square already under attack
 						!thisObj.areAnyOfTheseSqrsUnderAttackByPlayer([sqrIDAfterOffset], opponent) &&
 						// Makes sure king is not moving along the strafe attack vector of its strafe attacking unit, if there is one
