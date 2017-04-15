@@ -220,16 +220,15 @@ function makeSmartMove(){
 function getQualValOfCurrBoardForPlayer(player){
 	var quality = 0,
 		pieceMetrics = this.boardManager.getPieceMetricsForPlayer(player),
-		pieceCnt = this.boardManager.getPieceCntForPlayer(player),
 		oppCapPieceCnt = this.boardManager.getPieceCntForPlayer(this.boardManager.getOtherPlayer(player), "CAPTURED");
 
-	// Factor in piece value total of uncaptured allied pieces and captured opponent pieces
+	// Factor in piece value of uncaptured allied pieces, captured opponent pieces and attacked allied pieces
 	quality += 
-		pieceCnt.queens * settings.piecePointValueQueen + 
-		pieceCnt.bishops * settings.piecePointValueBishop + 
-		pieceCnt.knights * settings.piecePointValueKnight +
-		pieceCnt.rooks * settings.piecePointValueRook +
-		pieceCnt.pawns * settings.piecePointValuePawn;
+		pieceMetrics.uncapturedCnt.queens * settings.piecePointValueQueen + 
+		pieceMetrics.uncapturedCnt.bishops * settings.piecePointValueBishop + 
+		pieceMetrics.uncapturedCnt.knights * settings.piecePointValueKnight +
+		pieceMetrics.uncapturedCnt.rooks * settings.piecePointValueRook +
+		pieceMetrics.uncapturedCnt.pawns * settings.piecePointValuePawn;
 
 	quality += 
 		oppCapPieceCnt.queens * settings.piecePointValueQueen + 
@@ -238,8 +237,15 @@ function getQualValOfCurrBoardForPlayer(player){
 		oppCapPieceCnt.rooks * settings.piecePointValueRook +
 		oppCapPieceCnt.pawns * settings.piecePointValuePawn;
 
+	quality += 
+		-pieceMetrics.attackedCnt.queens * settings.piecePointValueQueen + 
+		-pieceMetrics.attackedCnt.bishops * settings.piecePointValueBishop + 
+		-pieceMetrics.attackedCnt.knights * settings.piecePointValueKnight +
+		-pieceMetrics.attackedCnt.rooks * settings.piecePointValueRook +
+		-pieceMetrics.attackedCnt.pawns * settings.piecePointValuePawn;
+
 	// Factor in number of squares attacked and number of squares defended. Divive by 10 so that we weight
-	// piece value total higher.
+	// piece value deltas higher.
 	quality += (pieceMetrics.numSqrsAttacked + pieceMetrics.numSqrsDefended) / 10;
 
 	return quality;

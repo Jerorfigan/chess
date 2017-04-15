@@ -597,10 +597,10 @@ BoardManager.prototype.getPieceMoveHistory = function(pieceID){
 };
 
 /**
- * Returns the piece count for the specified player, optionally filtered by which flag: "UNCAPTURED"/"CAPTURED"/"BOTH".
+ * Returns the piece count for the specified player, optionally filtered by which flag: "UNCAPTURED"/"CAPTURED"/"ATTACKED".
  * Default is "UNCAPTURED".
  * @param {string} player the player identifier to get a piece count for
- * @param {string} which "UNCAPTURED"/"CAPTURED"/"BOTH", default is "UNCAPTURED"
+ * @param {string} which "UNCAPTURED"/"CAPTURED"/"ATTACKED", default is "UNCAPTURED"
  */
 BoardManager.prototype.getPieceCntForPlayer = function(player, which){
 	var pieces = this.getAllPiecesForPlayer(player, which),
@@ -622,17 +622,17 @@ BoardManager.prototype.getPieceCntForPlayer = function(player, which){
 };
 
 /**
- * Returns all pieces for the specified player, optionally filtered by "which" flag ("UNCAPTURED"/"CAPTURED"/"BOTH", default
+ * Returns all pieces for the specified player, optionally filtered by "which" flag ("UNCAPTURED"/"CAPTURED"/"ATTACKED", default
  * is "UNCAPTURED"), and an array of piece IDs/piece types to exclude.
  * @param {string} player the player identifier
- * @param {string} which "UNCAPTURED"/"CAPTURED"/"BOTH", default is "UNCAPTURED"
+ * @param {string} which "UNCAPTURED"/"CAPTURED"/"ATTACKED", default is "UNCAPTURED"
  * @param {array} excluding array of piece IDs to exclude
  */
 BoardManager.prototype.getAllPiecesForPlayer = function(player, which, excluding){
 	validatePlayer(player);
 	(function validateWhichFlag(which){
 		if(which){
-			var validFlagValues = ["UNCAPTURED", "CAPTURED", "BOTH"];
+			var validFlagValues = ["UNCAPTURED", "CAPTURED", "ATTACKED"];
 			if(validFlagValues.indexOf(which) == -1){
 				throw "Invalid value for 'which' parameter";
 			}
@@ -642,12 +642,15 @@ BoardManager.prototype.getAllPiecesForPlayer = function(player, which, excluding
 	var pieces = [],
 		which = !which ? "UNCAPTURED" : which,
 		excluding = !excluding ? [] : excluding,
+		opponent = this.getOtherPlayer(player),
 		thisObj = this;
 
 	R.forEachObjIndexed(function(pieceData, pieceID){
+		var pieceAttackedByOpponent = thisObj.getPiecesAttackingPiece(pieceID).length != 0;
+
 		if(
 			thisObj.getPieceOwner(pieceID) == player && 
-			((which == "UNCAPTURED" && pieceData.sqrID != null) || (which == "CAPTURED" && pieceData.sqrID == null) || which == "BOTH") &&
+			((which == "UNCAPTURED" && pieceData.sqrID != null) || (which == "CAPTURED" && pieceData.sqrID == null) || (which == "ATTACKED" && pieceAttackedByOpponent)) &&
 			excluding.indexOf(pieceID) == -1 && excluding.indexOf(thisObj.getPieceType(pieceID)) == -1
 		){
 			pieces.push(pieceID);
@@ -664,7 +667,10 @@ BoardManager.prototype.getAllPiecesForPlayer = function(player, which, excluding
 BoardManager.prototype.getPieceMetricsForPlayer = function(player){
 	var metrics = {
 			numSqrsAttacked: 0,
-			numSqrsDefended: 0
+			numSqrsDefended: 0,
+			uncapturedCnt: this.getPieceCntForPlayer(player),
+			capturedCnt: this.getPieceCntForPlayer(player, "CAPTURED"),
+			attackedCnt: this.getPieceCntForPlayer(player, "ATTACKED")
 		},
 		opponent = this.getOtherPlayer(player),
 		thisObj = this;
