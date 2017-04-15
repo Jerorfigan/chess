@@ -760,6 +760,13 @@ BoardManager.prototype.whosTurnIsNext = function(){
 	return this.turnID % 2 == 0 ? "W" : "B" ;
 };
 
+/**
+ * Returns the current turn ID.
+ */
+BoardManager.prototype.getTurnID = function(){
+	return this.turnID;
+}
+
 /************************/
 /* Board state routines */
 /************************/

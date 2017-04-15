@@ -17,7 +17,13 @@ module.exports = AIManager;
  * Delegates to the routines necessary in order to cause the AI to take a turn.
  */
 function aiTakeTurn(){
-	makeSmartMove.call(this);	
+	// Have the AI make a random move for its opener to promote diversity of play
+	var currTurnID = this.boardManager.getTurnID();
+	if(currTurnID == 1 || currTurnID == 2){
+		makeRandomValidMove.call(this);
+	}else{
+		makeSmartMove.call(this);	
+	}
 }
 
 /**
