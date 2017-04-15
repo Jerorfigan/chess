@@ -338,13 +338,45 @@ BoardManager.prototype.getSqrsPieceCan = function(pieceID, action){
 		}
 	}
 
+	function getStrafeAttackOffset(sqrIDOfStrafeAttacker){
+		// Find the pseudo-magnitude and pseudo-unit vector from the attacker's square to the attacked piece's square normalized to square deltas
+		var sqr1Coord = sqrID2coord(sqrIDOfStrafeAttacker),
+			sqr2Coord = sqrID2coord(sqrID),
+			pseudoMagnitude = Math.max(Math.abs(sqr2Coord.x - sqr1Coord.x), Math.abs(sqr2Coord.y - sqr1Coord.y)),
+			pseudoUnitVecFrom1to2 = pseudoMagnitude > 0 ? {x: (sqr2Coord.x - sqr1Coord.x) / pseudoMagnitude, y: (sqr2Coord.y - sqr1Coord.y) / pseudoMagnitude} : {x: 0, y: 0};
+
+		// Return the pseudo-unit vector converted to an offset
+		return {fileOffset: pseudoUnitVecFrom1to2.x, rankOffset: pseudoUnitVecFrom1to2.y};
+	}
+
+	function areOffsetsEqual(offset1, offset2){
+		return offset1.fileOffset == offset2.fileOffset && offset1.rankOffset == offset2.rankOffset;
+	}
+
 	var pieceType = thisObj.getPieceType(pieceID);
 	switch(pieceType){
 		case "K":
 			for(var fileOffset = fileNumeral > 1 ? -1 : 0; fileOffset <= (fileNumeral < 8 ? 1 : 0); fileOffset++){
 				for(var rankOffset = rankNumeral > 1 ? -1 : 0; rankOffset <= (rankNumeral < 8 ? 1 : 0); rankOffset++){
 					if(fileOffset == 0 && rankOffset == 0) continue;
-					offsets.push({fileOffset: fileOffset, rankOffset: rankOffset});
+
+					// Make sure we're not putting the king in check with this move
+					var offset = {fileOffset: fileOffset, rankOffset: rankOffset},
+						sqrIDAfterOffset = num2algebraic(
+							addOffsetToNumSqrID(offset, fileNumeral, rankNumeral)
+						),
+						attackingPiecesThatCanStrafe = this.getPiecesAttackingPiece(pieceID, ["P","N"]),
+						attackingPieceSqrID = attackingPiecesThatCanStrafe.length > 0 ? this.getSqrWithPiece(attackingPiecesThatCanStrafe[0]) : null,
+						strafeAttackOffset = attackingPieceSqrID ? getStrafeAttackOffset(attackingPieceSqrID) : null;
+
+					if(
+						// Makes sure king is not moving into square already under attack
+						!thisObj.areAnyOfTheseSqrsUnderAttackByPlayer([sqrIDAfterOffset], opponent) &&
+						// Makes sure king is not moving along the strafe attack vector of its strafe attacking unit, if there is one
+						(!strafeAttackOffset || !areOffsetsEqual(strafeAttackOffset, offset))
+					){
+						offsets.push(offset);
+					}
 				}
 			}
 
@@ -407,10 +439,7 @@ BoardManager.prototype.getSqrsPieceCan = function(pieceID, action){
 				sqrContainsOpponentPiece = !sqrIsEmpty && thisObj.getPieceOwner(thisObj.getPieceAtSqr(sqrID)) == opponent;
 
 			if(action == "DEFEND" || sqrIsEmpty || sqrContainsOpponentPiece){
-				// If the piece is a king, make sure its not moving into a square under attack
-				if(thisObj.getPieceType(pieceID) != "K" || !thisObj.areAnyOfTheseSqrsUnderAttackByPlayer([sqrID], opponent)){
-					validMoves.push(sqrID);
-				}
+				validMoves.push(sqrID);
 			}
 		}
 	}, offsets);
@@ -487,7 +516,11 @@ BoardManager.prototype.getPlayerPiecesAttackingSquare = function(player, attacke
 		thisObj = this;
 
 	return this.board2attacker[attackedSqrID] ? 
-		R.filter(function(attackingPieceID){ return thisObj.getPieceOwner(attackingPieceID) == player && excludingPieces.indexOf(attackingPieceID) == -1; }, this.board2attacker[attackedSqrID]) :
+		R.filter(function(attackingPieceID){ 
+			return thisObj.getPieceOwner(attackingPieceID) == player && 
+				excludingPieces.indexOf(attackingPieceID) == -1 && 
+				excludingPieces.indexOf(thisObj.getPieceType(attackingPieceID)) == -1; 
+			}, this.board2attacker[attackedSqrID]) :
 		[];
 };
 
