@@ -325,9 +325,11 @@ BoardManager.prototype.getSqrsPieceCan = function(pieceID, action){
 				var sqrIDsToMoveThru = [
 						kingSqrID, 
 						num2algebraic(addOffsetToNumSqrID({fileOffset: -1, rankOffset: 0}, fileNumeral, rankNumeral)),
-						num2algebraic(addOffsetToNumSqrID({fileOffset: -2, rankOffset: 0}, fileNumeral, rankNumeral))],
+						num2algebraic(addOffsetToNumSqrID({fileOffset: -2, rankOffset: 0}, fileNumeral, rankNumeral)),
+						num2algebraic(addOffsetToNumSqrID({fileOffset: -3, rankOffset: 0}, fileNumeral, rankNumeral))],
 					kingDoesntMoveOutOfOrThroughCheckToCastle = !thisObj.areAnyOfTheseSqrsUnderAttackByPlayer(sqrIDsToMoveThru, opponent),
-					noPiecesBetweenKingAndQueensideRook = thisObj.isSquareEmpty(sqrIDsToMoveThru[1]) && thisObj.isSquareEmpty(sqrIDsToMoveThru[2]);
+					noPiecesBetweenKingAndQueensideRook = 
+						thisObj.isSquareEmpty(sqrIDsToMoveThru[1]) && thisObj.isSquareEmpty(sqrIDsToMoveThru[2]) && thisObj.isSquareEmpty(sqrIDsToMoveThru[3]);
 
 				if(kingDoesntMoveOutOfOrThroughCheckToCastle && noPiecesBetweenKingAndQueensideRook){
 					offsets.push({fileOffset: -2, rankOffset: 0});
