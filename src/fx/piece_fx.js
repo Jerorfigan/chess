@@ -107,10 +107,11 @@ var PieceFX = function(renderer, stage, boardFX){
 
 	// Graphiccs objects
 	this.piecesContainer = null;
+	this.pieceID2sprite = {};
 
 	// Register for events
 	gameEvent.subscribe("BoardSetup", onBoardSetup, this);
-	gameEvent.subscribe("BoardUpdated", onBoardUpdated, this);
+	gameEvent.subscribe("PiecesUpdated", onPiecesUpdated, this);
 };
 
 PieceFX.prototype.renderPieces = function(boardState){
@@ -118,6 +119,7 @@ PieceFX.prototype.renderPieces = function(boardState){
 		this.stage.removeChild(this.piecesContainer);
 		this.piecesContainer.destroy();
 		this.piecesContainer = null;
+		this.pieceID2sprite = {};
 	}
 
 	var pieceTextures = PIXI.loader.resources["assets/img/pieces_tileset.json"].textures,
@@ -141,11 +143,64 @@ PieceFX.prototype.renderPieces = function(boardState){
 		pieceSprite.x = canvasLoc.x;
 		pieceSprite.y = canvasLoc.y;
 
+		thisObj.pieceID2sprite[pieceID] = pieceSprite;
+
 		thisObj.piecesContainer.addChild(pieceSprite);
 	}, boardState);
 
 	this.stage.addChild(this.piecesContainer);
 	this.renderer.render(this.stage);
+};
+
+PieceFX.prototype.animatePieceUpdates = function(moves, capture){
+	var animatingPieces = [],
+		animDurationMS = 1000,
+		elapsedTimeMS = 0,
+		lastAnimateTS = null,
+		thisObj = this;
+
+	R.forEach(function(move){
+		animatingPieces.push({
+			sprite: thisObj.pieceID2sprite[move.pieceID],
+			startCanvasLoc: {x: thisObj.pieceID2sprite[move.pieceID].x, y: thisObj.pieceID2sprite[move.pieceID].y},
+			endCanvasLoc: thisObj.boardFX.getCanvasLocFromSqrID(move.sqrID),
+			animation: "move"
+		});
+	}, moves);
+
+	if(capture){
+		animatingPieces.push({
+			sprite: thisObj.pieceID2sprite[capture.pieceID],
+			animation: "capture"
+		});
+	}
+
+	function animate(currTimeTS){
+		elapsedTimeMS += lastAnimateTS ? currTimeTS - lastAnimateTS : 0;
+		lastAnimateTS = currTimeTS;
+
+		// Animate pieces
+		R.forEach(function(animatingPiece){
+			if(animatingPiece.animation == "move"){
+				var currCanvasLoc = linearlyInterpolate(animatingPiece.startCanvasLoc, animatingPiece.endCanvasLoc, Math.min(elapsedTimeMS/animDurationMS,1));
+				animatingPiece.sprite.x = currCanvasLoc.x;
+				animatingPiece.sprite.y = currCanvasLoc.y;
+			}else if(animatingPiece.animation == "capture"){
+				animatingPiece.sprite.alpha = Math.max(1 - elapsedTimeMS/animDurationMS,0);
+			}else{
+				throw "Unknown animation";
+			}
+		}, animatingPieces)
+
+		thisObj.renderer.render(thisObj.stage);
+		if(elapsedTimeMS < animDurationMS){
+			window.requestAnimationFrame(animate);
+		}else{
+			gameEvent.fire("NextTurn");
+		}	
+	}
+
+	animate(performance.now());
 };
 
 /* DEBUG FUNCTION */
@@ -182,10 +237,18 @@ PieceFX.prototype.renderPieceAttacks = function(board2attacker){
 
 module.exports = PieceFX;
 
+function linearlyInterpolate(startCanvasLoc, endCanvasLoc, interpolationFactor){
+	var deltaVector = {x: (endCanvasLoc.x - startCanvasLoc.x) * interpolationFactor, y: (endCanvasLoc.y - startCanvasLoc.y) * interpolationFactor};
+
+	return {x: startCanvasLoc.x + deltaVector.x, y: startCanvasLoc.y + deltaVector.y};
+}
+
+/* Event handlers */
+
 function onBoardSetup(eventName, data){
 	this.renderPieces(data.pieces);
 }
 
-function onBoardUpdated(eventName, data){
-	this.renderPieces(data.pieces);
+function onPiecesUpdated(eventName, data){
+	this.animatePieceUpdates(data.moves, data.capture);
 }

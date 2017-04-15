@@ -24,9 +24,9 @@ var gameEvent = {
 
 gameEvent.create("GameStarted");
 gameEvent.create("BoardSetup");
-gameEvent.create("BoardUpdated");
 gameEvent.create("BoardSquareSelected");
 gameEvent.create("PieceSelected");
+gameEvent.create("PiecesUpdated");
 gameEvent.create("NextTurn");
 gameEvent.create("PieceCaptured");
 gameEvent.create("Checkmate");

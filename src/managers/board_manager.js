@@ -54,7 +54,9 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 		playerMovingPiece = this.getPieceOwner(pieceID),
 		playerTitle = playerMovingPiece == settings.humanPlayer ? "Player" : "AI",
 		opponent = this.getOtherPlayer(playerMovingPiece),
-		speculating = !speculating ? false : speculating;
+		speculating = !speculating ? false : speculating,
+		moves = [],
+		capture = null;
 
 	if(!speculating){
 		console.log(playerTitle + ": Moving " + pieceID + " from " + fromSqrID + " to " + toSqrID);
@@ -68,6 +70,7 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 		var capturedPieceID = this.getPieceAtSqr(toSqrID);
 		removePieceFromBoard.call(this, capturedPieceID);
 		if(!speculating){
+			capture = {pieceID: capturedPieceID};
 			console.log(pieceID + " captures " + capturedPieceID);
 			gameEvent.fire("PieceCaptured", {capturedPieceID: capturedPieceID, sqrID: toSqrID});
 		}
@@ -80,6 +83,7 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 		var capturedPieceID = this.getPieceAtSqr(targetOfEnPassantAttackSqrID);
 		removePieceFromBoard.call(this, capturedPieceID);
 		if(!speculating){
+			capture = {pieceID: capturedPieceID};
 			console.log(movingPieceID + " captures " + capturedPieceID);
 			gameEvent.fire("PieceCaptured", {capturedPieceID: capturedPieceID, sqrID: targetOfEnPassantAttackSqrID});
 		}
@@ -97,6 +101,7 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 		this.pieces[rookPieceID].moveHistory[this.turnID] = rookSqrIDAfterCastling;
 
 		if(!speculating){
+			moves.push({pieceID: rookPieceID, sqrID: rookSqrIDAfterCastling});
 			console.log(playerMovingPiece + " castled " + (castleKingside ? "kingside" : "queenside"));
 		}
 	}
@@ -119,7 +124,8 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 	updateAttackDataForPieces.call(this, enemyStrafingPieces);
 
 	if(!speculating){
-		gameEvent.fire("BoardUpdated", {pieces: this.board2piece, board2attacker: this.board2attacker});
+		moves.push({pieceID: pieceID, sqrID: toSqrID});
+		gameEvent.fire("PiecesUpdated", {moves: moves, capture: capture});
 	}
 
 	// Check for end of game conditions
@@ -144,9 +150,6 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 
 	// Increment turn, needs to be the last thing we do
 	this.turnID++;
-	if(!speculating){
-		gameEvent.fire("NextTurn");
-	}
 
 	return {checkmate: false, stalemate: false};
 };

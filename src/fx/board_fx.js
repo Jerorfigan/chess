@@ -16,7 +16,7 @@ var BoardFX = function(renderer, stage){
 	// Register for events
 	gameEvent.subscribe("PieceSelected", onPieceSelected, this);
 	gameEvent.subscribe("BoardSetup", onBoardSetup, this);
-	gameEvent.subscribe("BoardUpdated", onBoardUpdated, this);
+	gameEvent.subscribe("PiecesUpdated", onPiecesUpdated, this);
 };
 
 // Returns the center coordinate of the square graphic
@@ -83,7 +83,7 @@ BoardFX.prototype.renderBoard = function(){
 module.exports = BoardFX;
 
 /* EVENT HANDLERS */
-function onBoardUpdated(eventName, data){
+function onPiecesUpdated(eventName, data){
 	destroyHighlights.call(this);
 }
 
