@@ -30,7 +30,7 @@ function makeSmartMove(){
 		moveSeqList = [dummyMoveSeq],
 	// Set [depth threshold]
 	// Set [branch threshold]
-		maxDepth = settings.aiSkillLevel == 1 ? 1 : (settings.aiSkillLevel == 2 ? 3 : 5),
+		maxDepth = settings.aiSkillLevel == 1 ? 2 : (settings.aiSkillLevel == 2 ? 4 : 6),
 		maxBranch = settings.aiSkillLevel == 1 ? 2 : (settings.aiSkillLevel == 2 ? 3 : 4),
 	// Save current board state as initial board state
 		initialBoardState = this.boardManager.saveBoardState(),
@@ -62,63 +62,82 @@ function makeSmartMove(){
 			// Get all possible moves for current player for current board state
 			var allMovesForPlayer = this.boardManager.getAllMovesForPlayer(currPlayer);
 
-			// For each possible move
-			R.forEach(function(currPieceMoveSet){
-				var currPiece = currPieceMoveSet.pieceID;
+			// For each possible move. Wrap in try-catch to allow for special exceptions to get us out of
+			// forEach loop to expedite search.
+			try{
+				R.forEach(function(currPieceMoveSet){
+					var currPiece = currPieceMoveSet.pieceID;
 
-				R.forEach(function(currMove){
-					// Set current new move sequence to clone of current move sequence
-					var currNewMoveSeq = R.clone(currMoveSeq);
+					R.forEach(function(currMove){
+						// Set current new move sequence to clone of current move sequence
+						var currNewMoveSeq = R.clone(currMoveSeq);
 
-					// If current move is valid
-					if(thisObj.boardManager.canPieceMoveToSqr(currPiece, currMove)){
-						// Perform current move
-						// Get true/false whether this is an end-game move (checkmate, stalemate)
-						var isEndgameMove = thisObj.boardManager.movePieceToSqr(currPiece, currMove, true);
-						
-						// Get heuristic value of board state after current move with regard to player making the move
-						var quality = getQualValOfCurrBoardForPlayer.call(thisObj, currPlayer);
-						
-						// If current player is AI
-						if(currPlayer == thisObj.player){
-							// Add heuristic value to current new move sequence quality property
-							currNewMoveSeq.quality += quality;
-						}else{
-							// Subtract heuristic value from current new move sequence quality property
-							currNewMoveSeq.quality -= quality;
+						// If current move is valid
+						if(thisObj.boardManager.canPieceMoveToSqr(currPiece, currMove)){
+							// Perform current move
+							var gameOverFlags = thisObj.boardManager.movePieceToSqr(currPiece, currMove, true);
+
+							// Get heuristic value of board state after current move with regard to player making the move
+							var quality = getQualValOfCurrBoardForPlayer.call(thisObj, currPlayer);
+							
+							// If current player is AI
+							if(currPlayer == thisObj.player){
+								// Add heuristic value to current new move sequence quality property
+								currNewMoveSeq.quality += quality;
+							}else{
+								// Subtract heuristic value from current new move sequence quality property
+								currNewMoveSeq.quality -= quality;
+							}
+
+							// Set endgame property on current new move sequence
+							currNewMoveSeq.endgame = gameOverFlags.checkmate || gameOverFlags.stalemate;
+
+							// Insert current move into current new move sequence
+							currNewMoveSeq.moves.push({piece: currPiece, to: currMove});
+
+							// Is there a checkmate one move away?
+							if(gameOverFlags.checkmate && currNewMoveSeq.moves.length == 1){
+								// No brainer, do it
+								moveSeqList = [];
+								newMoveSeqList = [];
+								newMoveSeqList.push(currNewMoveSeq);
+								throw "CheckmateFoundOneMoveAway";
+							}
+
+							// Insert current new move sequence into new move sequence list
+							newMoveSeqList.push(currNewMoveSeq);
+
+							var compFunc = null;
+
+							// If player is AI
+							if(currPlayer == thisObj.player){
+								// Sort new move sequence list by descending quality, so that we prioritize searching sequences containing the best moves for AI player
+								compFunc = function(a,b){ return b.quality - a.quality; };
+							}else{
+								// Sort new move sequence list by ascending quality, so that we prioritize searching sequences containing the best moves for opponent player
+								compFunc = function(a,b){ return a.quality - b.quality; };
+							}
+
+							// Sort new move sequence list by descending/ascending quality based on current player 
+							newMoveSeqList = R.sort(compFunc, newMoveSeqList);
+
+							// Truncate new move sequence list to [branch threshold]
+							newMoveSeqList = newMoveSeqList.slice(0, maxBranch);
+
+							// Restore board state to base search state
+							thisObj.boardManager.loadBoardState(baseSearchBoardState);
 						}
-
-						// Set endgame property on current new move sequence
-						currNewMoveSeq.endgame = isEndgameMove;
-
-						// Insert current move into current new move sequence
-						currNewMoveSeq.moves.push({piece: currPiece, to: currMove});
-
-						// Insert current new move sequence into new move sequence list
-						newMoveSeqList.push(currNewMoveSeq);
-
-						var compFunc = null;
-
-						// If player is AI
-						if(currPlayer == thisObj.player){
-							// Sort new move sequence list by descending quality, so that we prioritize searching sequences containing the best moves for AI player
-							compFunc = function(a,b){ return b.quality - a.quality; };
-						}else{
-							// Sort new move sequence list by ascending quality, so that we prioritize searching sequences containing the best moves for opponent player
-							compFunc = function(a,b){ return a.quality - b.quality; };
-						}
-
-						// Sort new move sequence list by descending/ascending quality based on current player 
-						newMoveSeqList = R.sort(compFunc, newMoveSeqList);
-
-						// Truncate new move sequence list to [branch threshold]
-						newMoveSeqList = newMoveSeqList.slice(0, maxBranch);
-
-						// Restore board state to base search state
-						thisObj.boardManager.loadBoardState(baseSearchBoardState);
-					}
-				}, currPieceMoveSet.moves);
-			}, allMovesForPlayer);
+					}, currPieceMoveSet.moves);
+				}, allMovesForPlayer);
+			}catch(e){
+				// Swallow special error messages designed to get us out of above forEach loop to expedite search.
+				// Re-throw anything else.
+				switch(e){
+					case "CheckmateFoundOneMoveAway": break;
+					default: 
+						throw e;
+				}
+			}
 
 			// Concatenate move sequence list with new move sequence list (appending all items in new move sequence list to the back of move sequence list)
 			moveSeqList = moveSeqList.concat(newMoveSeqList);
@@ -127,21 +146,41 @@ function makeSmartMove(){
 			thisObj.boardManager.loadBoardState(initialBoardState);
 		}
 
-		// Setup timeout to keep thinking or call the done method
-		if(moveSeqList.length > 0 && moveSeqList[0].moves.length < maxDepth){
-			setTimeout(function(){ think.call(thisObj); }, 1);
-		}else{
+		// Are we done thinking?
+		if(
+			// No more move sequences to search
+			moveSeqList.length == 0 || 
+			// Hit max depth in BFS tree
+			moveSeqList[0].moves.length == maxDepth || 
+			// Only endgame sequences left in list
+			R.filter(function(moveSeq){ return !moveSeq.endgame; }, moveSeqList).length == 0
+		){
+			// Call the done method
 			doneThinking.call(this);
+		}else{
+			// Keep thinking
+			setTimeout(function(){ think.call(thisObj); }, 1);
 		}
 
 	}
 
 	function doneThinking(){
+		// Log AI time spent thinking
+		var endTime = new Date(),
+			secondsSpentThinking = (endTime.getTime() - startTime.getTime()) / 1000;
+		console.log("AI spent " + secondsSpentThinking + " seconds analyzing next move.");
+
 		// If move sequence list is empty
 		if(moveSeqList.length == 0){
 			// Report that AI could not find valid move 
 			console.log("AI could not find valid move");
+		// If move sequence list contains only 1 move sequence
+		}else if(moveSeqList.length == 1){
+			// Perform the move
+			this.boardManager.movePieceToSqr(moveSeqList[0].moves[0].piece, moveSeqList[0].moves[0].to);
 		}else{
+			// Perform the move leading to the best possible outcomes
+
 			var qualityTotalByMove = {};
 
 			// Foreach move sequence in move sequence list
@@ -164,11 +203,6 @@ function makeSmartMove(){
 
 			var chosenMove = {pieceID: moveKeyWithHighestQuality.split("-")[0], sqrID: moveKeyWithHighestQuality.split("-")[1]};
 
-			// Log AI time spent thinking
-			var endTime = new Date(),
-				secondsSpentThinking = (endTime.getTime() - startTime.getTime()) / 1000;
-			console.log("AI took " + secondsSpentThinking + " seconds to move.");
-
 			// Perform move
 			this.boardManager.movePieceToSqr(chosenMove.pieceID, chosenMove.sqrID);
 		}
@@ -184,11 +218,12 @@ function makeSmartMove(){
  * Returns the quality value for the current board state with respect to the specified player, where higher is better.
  */
 function getQualValOfCurrBoardForPlayer(player){
-	var quality = 0;
-
-	// Factor in number of uncaptured allied pieces and number of captured opponent pieces
-	var pieceCnt = this.boardManager.getPieceCntForPlayer(player),
+	var quality = 0,
+		pieceMetrics = this.boardManager.getPieceMetricsForPlayer(player),
+		pieceCnt = this.boardManager.getPieceCntForPlayer(player),
 		oppCapPieceCnt = this.boardManager.getPieceCntForPlayer(this.boardManager.getOtherPlayer(player), "CAPTURED");
+
+	// Factor in piece value total of uncaptured allied pieces and captured opponent pieces
 	quality += 
 		pieceCnt.queens * settings.piecePointValueQueen + 
 		pieceCnt.bishops * settings.piecePointValueBishop + 
@@ -202,6 +237,10 @@ function getQualValOfCurrBoardForPlayer(player){
 		oppCapPieceCnt.knights * settings.piecePointValueKnight +
 		oppCapPieceCnt.rooks * settings.piecePointValueRook +
 		oppCapPieceCnt.pawns * settings.piecePointValuePawn;
+
+	// Factor in number of squares attacked and number of squares defended. Divive by 10 so that we weight
+	// piece value total higher.
+	quality += (pieceMetrics.numSqrsAttacked + pieceMetrics.numSqrsDefended) / 10;
 
 	return quality;
 }

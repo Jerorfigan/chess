@@ -37,7 +37,10 @@ BoardManager.prototype.resetBoard = function(){
 /**************************************/
 
 /**
- * Moves the piece the specified piece to the specified square. Returns true if this move causes the game to end, false otherwise.
+ * Moves the piece the specified piece to the specified square. Returns game-over flags following the move as:
+ *
+ * {checkmate: true/false, stalemate: true/false}
+ *
  * @param {string} pieceID the piece ID of the piece
  * @param {string} toSqrID the square ID of the square
  * @param {boolean} speculating true, to signify that this is a speculative move, not an actual move, and to suppress console
@@ -126,13 +129,13 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 			console.log("Checkmate. " + playerMovingPiece + " wins.");
 			gameEvent.fire("Checkmate", {winningPlayer: playerMovingPiece});
 		}
-		return true;
+		return {checkmate: true, stalemate: false};
 	}else if(hasStalemateOccured.call(this)){
 		if(!speculating){
 			console.log("Stalemate.");
 			gameEvent.fire("Stalemate");
 		}
-		return true;
+		return {checkmate: false, stalemate: true};
 	}
 
 	// Increment turn, needs to be the last thing we do
@@ -141,7 +144,7 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 		gameEvent.fire("NextTurn");
 	}
 
-	return false;
+	return {checkmate: false, stalemate: false};
 };
 
 /**
@@ -652,6 +655,37 @@ BoardManager.prototype.getAllPiecesForPlayer = function(player, which, excluding
 	}, this.pieces);
 
 	return pieces;
+};
+
+/**
+ * Returns a collection of metrics for the pieces belonging to the specified player for the current board state.
+ * @param {string} player the player identifier 
+ */
+BoardManager.prototype.getPieceMetricsForPlayer = function(player){
+	var metrics = {
+			numSqrsAttacked: 0,
+			numSqrsDefended: 0
+		},
+		opponent = this.getOtherPlayer(player),
+		thisObj = this;
+
+	R.forEachObjIndexed(function(attackers, sqrID){
+		var sqrIsEmpty = thisObj.isSquareEmpty(sqrID),
+			sqrHasAlliedPiece = thisObj.squareHasPlayerPiece(sqrID, player),
+			sqrHasOppPiece = thisObj.squareHasPlayerPiece(sqrID, opponent),
+			playerPiecesAttackingSqr = thisObj.getPlayerPiecesAttackingSquare(player, sqrID);
+		
+		if((sqrIsEmpty || sqrHasOppPiece) && playerPiecesAttackingSqr.length > 0){
+			metrics.numSqrsAttacked++;
+		}
+
+		if(sqrHasAlliedPiece && playerPiecesAttackingSqr.length > 0){
+			metrics.numSqrsDefended++;
+		}
+
+	}, this.board2attacker);
+
+	return metrics;
 };
 
 /*******************/
