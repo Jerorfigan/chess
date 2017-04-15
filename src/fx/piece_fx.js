@@ -184,10 +184,8 @@ module.exports = PieceFX;
 
 function onBoardSetup(eventName, data){
 	this.renderPieces(data.pieces);
-	this.renderPieceAttacks(data.board2attacker)
 }
 
 function onBoardUpdated(eventName, data){
 	this.renderPieces(data.pieces);
-	this.renderPieceAttacks(data.board2attacker)
 }
