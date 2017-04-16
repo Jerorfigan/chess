@@ -32,11 +32,15 @@ var settings = {
 
 	// AI settings
 	aiSkillLevel: 3,									// 1 (novice), 2 (intermediate), 3 (expert)
-	piecePointValueQueen: 4,
-	piecePointValueBishop: 2,
-	piecePointValueKnight: 2,
-	piecePointValueRook: 3,
-	piecePointValuePawn: 1
+	piecePointValueQueen: 6,
+	piecePointValueBishop: 3,
+	piecePointValueKnight: 3,
+	piecePointValueRook: 4,
+	piecePointValuePawn: 1,
+	aiPriorityLevel_GainMaterialAdvantage: 100,         // 0% - 100%
+	aiPriorityLevel_ProtectKing: 16, 					// 0% - 100%
+	aiPriorityLevel_PromotePawns: 12.5,					// 0% - 100%
+	aiPriorityLevel_CaptureAndDefend: 10                // 0% - 100%
 };
 
 module.exports = settings;

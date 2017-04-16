@@ -84,7 +84,7 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 		removePieceFromBoard.call(this, capturedPieceID);
 		if(!speculating){
 			capture = {pieceID: capturedPieceID};
-			console.log(movingPieceID + " captures " + capturedPieceID);
+			console.log(pieceID + " captures " + capturedPieceID);
 			gameEvent.fire("PieceCaptured", {capturedPieceID: capturedPieceID, sqrID: targetOfEnPassantAttackSqrID});
 		}
 	// Did we castle?
@@ -713,11 +713,14 @@ BoardManager.prototype.getPieceMetricsForPlayer = function(player){
 			numSqrsDefended: 0,
 			uncapturedCnt: this.getPieceCntForPlayer(player),
 			capturedCnt: this.getPieceCntForPlayer(player, "CAPTURED"),
-			attackedCnt: this.getPieceCntForPlayer(player, "ATTACKED")
+			attackedCnt: this.getPieceCntForPlayer(player, "ATTACKED"),
+			piecesAdjacentToKing: [],
+			pawnCntByRank: {"8": 0, "7": 0, "6": 0, "5": 0, "4": 0, "3": 0, "2": 0, "1": 0}
 		},
 		opponent = this.getOtherPlayer(player),
 		thisObj = this;
 
+	// Calculate numSqrsAttacked and numSqrsDefended
 	R.forEachObjIndexed(function(attackers, sqrID){
 		var sqrIsEmpty = thisObj.isSquareEmpty(sqrID),
 			sqrHasAlliedPiece = thisObj.squareHasPlayerPiece(sqrID, player),
@@ -733,6 +736,28 @@ BoardManager.prototype.getPieceMetricsForPlayer = function(player){
 		}
 
 	}, this.board2attacker);
+
+	// Find pieces adjacent to king
+	var kingSqrID = this.getSqrWithPiece(player + "K"),
+		kingCoord = sqrID2coord(kingSqrID);
+	for(var y = -1; y < 2; y++){
+		for(var x = -1; x < 2; x++){
+			if(y == 0 && x == 0) continue;
+			var adjacentCoord = addCoords(kingCoord, {x: x, y: y}),
+				adjacentSqrID = coord2sqrID(adjacentCoord),
+				adjacentPieceID = adjacentSqrID ? this.getPieceAtSqr(adjacentSqrID) : null;
+
+			if(adjacentPieceID) metrics.piecesAdjacentToKing.push(this.getPieceType(adjacentPieceID));
+		}
+	}
+
+	// Count pawns by rank
+	var pawns = this.getAllPiecesForPlayer(player, "UNCAPTURED", ["K", "Q", "B", "N", "R"]);
+
+	R.forEach(function(pieceID){
+		var rank = getSqrRank.call(thisObj, thisObj.getSqrWithPiece(pieceID));
+		metrics.pawnCntByRank[rank]++;
+	}, pawns);
 
 	return metrics;
 };
@@ -934,10 +959,26 @@ function sqrID2coord(sqrID){
  * Examples:
  * {x: 1, y: 5} => a5
  * {x: 3, y: 7} => c7
+ *
+ * If the coord does not map to a valid sqr, returns null.
+ *
  * @param {object} coord {x: <x coord representing file>, y: <y coord representing row>}
  */
 function coord2sqrID(coord){
-	return getFileFromNumeral(coord.x) + coord.y;
+	if(coord.x >= 1 && coord.x <= 8 && coord.y >= 1 && coord.y <= 8){
+		return getFileFromNumeral(coord.x) + coord.y;
+	}else{
+		return null;
+	}
+}
+
+/**
+ * Adds two coordinates and returns the result.
+ * @param {object} coord1 a coordinate
+ * @param {object} coord2 a coordinate
+ */
+function addCoords(coord1, coord2){
+	return {x: coord1.x + coord2.x, y: coord1.y + coord2.y};
 }
 
 /**

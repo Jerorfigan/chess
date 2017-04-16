@@ -276,33 +276,56 @@ function makeSmartMove(){
 function getQualValOfCurrBoardForPlayer(player){
 	var quality = 0,
 		pieceMetrics = this.boardManager.getPieceMetricsForPlayer(player),
-		oppCapPieceCnt = this.boardManager.getPieceCntForPlayer(this.boardManager.getOtherPlayer(player), "CAPTURED");
+		oppCapPieceCapturedCnt = this.boardManager.getPieceCntForPlayer(this.boardManager.getOtherPlayer(player), "CAPTURED"),
+		pieceType2PointValue = {"Q": settings.piecePointValueQueen, "B": settings.piecePointValueBishop, "N": settings.piecePointValueKnight,
+			"R": settings.piecePointValueRook, "P": settings.piecePointValuePawn};
 
-	// Factor in piece value of uncaptured allied pieces, captured opponent pieces and attacked allied pieces
-	quality += 
+	// Factor in material advantage
+	var materialAdvantage = 0;
+	materialAdvantage += 
 		pieceMetrics.uncapturedCnt.queens * settings.piecePointValueQueen + 
 		pieceMetrics.uncapturedCnt.bishops * settings.piecePointValueBishop + 
 		pieceMetrics.uncapturedCnt.knights * settings.piecePointValueKnight +
 		pieceMetrics.uncapturedCnt.rooks * settings.piecePointValueRook +
 		pieceMetrics.uncapturedCnt.pawns * settings.piecePointValuePawn;
 
-	quality += 
-		oppCapPieceCnt.queens * settings.piecePointValueQueen + 
-		oppCapPieceCnt.bishops * settings.piecePointValueBishop + 
-		oppCapPieceCnt.knights * settings.piecePointValueKnight +
-		oppCapPieceCnt.rooks * settings.piecePointValueRook +
-		oppCapPieceCnt.pawns * settings.piecePointValuePawn;
+	materialAdvantage += 
+		oppCapPieceCapturedCnt.queens * settings.piecePointValueQueen + 
+		oppCapPieceCapturedCnt.bishops * settings.piecePointValueBishop + 
+		oppCapPieceCapturedCnt.knights * settings.piecePointValueKnight +
+		oppCapPieceCapturedCnt.rooks * settings.piecePointValueRook +
+		oppCapPieceCapturedCnt.pawns * settings.piecePointValuePawn;
 
-	quality += 
+	materialAdvantage += 
 		-pieceMetrics.attackedCnt.queens * settings.piecePointValueQueen + 
 		-pieceMetrics.attackedCnt.bishops * settings.piecePointValueBishop + 
 		-pieceMetrics.attackedCnt.knights * settings.piecePointValueKnight +
 		-pieceMetrics.attackedCnt.rooks * settings.piecePointValueRook +
 		-pieceMetrics.attackedCnt.pawns * settings.piecePointValuePawn;
 
+	quality += materialAdvantage * (settings.aiPriorityLevel_GainMaterialAdvantage/100);
+
+	// Factor in point value of pieces adjacent to king to promote protecting the king. Divide by 6 so that we
+	// weight material advantage higher.
+	var pointTotalOfPiecesAdjacentToKing = 0;
+	R.forEach(function(pieceType){
+		pointTotalOfPiecesAdjacentToKing += pieceType2PointValue[pieceType];
+	}, pieceMetrics.piecesAdjacentToKing);
+
+	quality += pointTotalOfPiecesAdjacentToKing * (settings.aiPriorityLevel_ProtectKing/100);
+
+	// Factor in total squares moved by pawns to promote pawn progression, Divive by 8 so that we weight material 
+	// advantage higher.
+	var totalSqrsMovedByPawns = 0;
+	R.forEachObjIndexed(function(cnt, rank){
+		totalSqrsMovedByPawns += player == "W" ? cnt * (parseInt(rank) - 2) : cnt * (7 - parseInt(rank)); 
+	}, pieceMetrics.pawnCntByRank);
+
+	quality += totalSqrsMovedByPawns * (settings.aiPriorityLevel_PromotePawns/100);
+
 	// Factor in number of squares attacked and number of squares defended. Divive by 10 so that we weight
-	// piece value deltas higher.
-	quality += (pieceMetrics.numSqrsAttacked + pieceMetrics.numSqrsDefended) / 10;
+	// material advantage higher.
+	quality += (pieceMetrics.numSqrsAttacked + pieceMetrics.numSqrsDefended) * (settings.aiPriorityLevel_CaptureAndDefend/100);
 
 	return quality;
 }
