@@ -41,8 +41,8 @@ function makeSmartMove(){
 			settings.aiSkillLevel == 1 ? 
 				{"1": 20, "2": 5} : 
 				(settings.aiSkillLevel == 2 ? 
-					{"1": 20, "2": 5, "3": 1} : 
-					{"1": 20, "2": 5, "3": 1, "4": 1}),
+					{"1": 13, "2": 5, "3": 1} : 
+					{"1": 10, "2": 5, "3": 1, "4": 1}),
 	// Save current board state as initial board state
 		initialBoardState = this.boardManager.saveBoardState(),
 		thisObj = this;
