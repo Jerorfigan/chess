@@ -36,13 +36,13 @@ function makeSmartMove(){
 		moveSeqList = [dummyMoveSeq],
 	// Set [depth threshold]
 	// Set [branch threshold]
-		maxDepth = settings.aiSkillLevel == 1 ? 4 : (settings.aiSkillLevel == 2 ? 6 : 8),
+		maxDepth = settings.aiSkillLevel == 1 ? 2 : (settings.aiSkillLevel == 2 ? 3 : 4),
 		maxBranch = 
 			settings.aiSkillLevel == 1 ? 
-				{"1": 20, "2": 5, "3": 1, "4": 1} : 
+				{"1": 20, "2": 5} : 
 				(settings.aiSkillLevel == 2 ? 
-					{"1": 20, "2": 5, "3": 2, "4": 1, "5": 1, "6": 1} : 
-					{"1": 40, "2": 5, "3": 2, "4": 1, "5": 1, "6": 1, "7": 1, "8": 1}),
+					{"1": 20, "2": 5, "3": 1} : 
+					{"1": 20, "2": 5, "3": 1, "4": 1}),
 	// Save current board state as initial board state
 		initialBoardState = this.boardManager.saveBoardState(),
 		thisObj = this;
