@@ -143,6 +143,8 @@ PieceFX.prototype.renderPieces = function(boardState){
 		pieceSprite.x = canvasLoc.x;
 		pieceSprite.y = canvasLoc.y;
 
+		pieceSprite.zOrder = 1;
+
 		thisObj.pieceID2sprite[pieceID] = pieceSprite;
 
 		thisObj.piecesContainer.addChild(pieceSprite);
@@ -160,12 +162,17 @@ PieceFX.prototype.animatePieceUpdates = function(moves, capture){
 		thisObj = this;
 
 	R.forEach(function(move){
-		animatingPieces.push({
+		var animatingPiece = {
 			sprite: thisObj.pieceID2sprite[move.pieceID],
 			startCanvasLoc: {x: thisObj.pieceID2sprite[move.pieceID].x, y: thisObj.pieceID2sprite[move.pieceID].y},
 			endCanvasLoc: thisObj.boardFX.getCanvasLocFromSqrID(move.sqrID),
 			animation: "move"
-		});
+		};
+
+		animatingPiece.origZOrder = animatingPiece.sprite.zOrder;
+		animatingPiece.sprite.zOrder = 99;
+
+		animatingPieces.push(animatingPiece);
 	}, moves);
 
 	if(capture){
@@ -185,6 +192,9 @@ PieceFX.prototype.animatePieceUpdates = function(moves, capture){
 				var currCanvasLoc = linearlyInterpolate(animatingPiece.startCanvasLoc, animatingPiece.endCanvasLoc, Math.min(elapsedTimeMS/animDurationMS,1));
 				animatingPiece.sprite.x = currCanvasLoc.x;
 				animatingPiece.sprite.y = currCanvasLoc.y;
+				if(elapsedTimeMS >= animDurationMS){
+					animatingPiece.sprite.zOrder = animatingPiece.origZOrder;
+				}
 			}else if(animatingPiece.animation == "capture"){
 				animatingPiece.sprite.alpha = Math.max(1 - elapsedTimeMS/animDurationMS,0);
 			}else{
@@ -196,9 +206,12 @@ PieceFX.prototype.animatePieceUpdates = function(moves, capture){
 		if(elapsedTimeMS < animDurationMS){
 			window.requestAnimationFrame(animate);
 		}else{
+			thisObj.piecesContainer.children = R.sort(function(a, b){ return a.zOrder - b.zOrder; }, thisObj.piecesContainer.children);
 			gameEvent.fire("NextTurn");
 		}	
 	}
+
+	this.piecesContainer.children = R.sort(function(a, b){ return a.zOrder - b.zOrder; }, this.piecesContainer.children);
 
 	animate(performance.now());
 };
