@@ -31,7 +31,7 @@ var settings = {
 	aiPlayer: "B",
 
 	// AI settings
-	aiSkillLevel: 3,									// 1 (novice), 2 (intermediate), 3 (expert)
+	aiSkillLevel: 1,									// 1 (novice), 2 (intermediate), 3 (expert)
 	piecePointValueQueen: 4,
 	piecePointValueBishop: 2,
 	piecePointValueKnight: 2,
