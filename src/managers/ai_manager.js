@@ -36,8 +36,13 @@ function makeSmartMove(){
 		moveSeqList = [dummyMoveSeq],
 	// Set [depth threshold]
 	// Set [branch threshold]
-		maxDepth = settings.aiSkillLevel == 1 ? 2 : (settings.aiSkillLevel == 2 ? 4 : 5),
-		maxBranch = settings.aiSkillLevel == 1 ? 2 : (settings.aiSkillLevel == 2 ? 3 : 3),
+		maxDepth = settings.aiSkillLevel == 1 ? 4 : (settings.aiSkillLevel == 2 ? 6 : 8),
+		maxBranch = 
+			settings.aiSkillLevel == 1 ? 
+				{"1": 20, "2": 5, "3": 1, "4": 1} : 
+				(settings.aiSkillLevel == 2 ? 
+					{"1": 20, "2": 5, "3": 2, "4": 1, "5": 1, "6": 1} : 
+					{"1": 40, "2": 5, "3": 2, "4": 1, "5": 1, "6": 1, "7": 1, "8": 1}),
 	// Save current board state as initial board state
 		initialBoardState = this.boardManager.saveBoardState(),
 		thisObj = this;
@@ -136,7 +141,7 @@ function makeSmartMove(){
 							newMoveSeqList = R.sort(compFunc, newMoveSeqList);
 
 							// Truncate new move sequence list to [branch threshold]
-							newMoveSeqList = newMoveSeqList.slice(0, maxBranch);
+							newMoveSeqList = newMoveSeqList.slice(0, maxBranch[currNewMoveSeq.moves.length]);
 
 							// Restore board state to base search state
 							thisObj.boardManager.loadBoardState(baseSearchBoardState);
