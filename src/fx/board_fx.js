@@ -11,7 +11,7 @@ var BoardFX = function(renderer, stage){
 	this.highlights = null;
 
 	// Constants
-	this.sqrWidth = (settings.canvasWidth - settings.boardSqrBorderSize) / 8;
+	this.sqrWidth = (settings.canvasWidth - settings.boardSqrBorderSize - settings.boardEdgeSize * 2) / 8;
 
 	// Register for events
 	gameEvent.subscribe("PieceSelected", onPieceSelected, this);
@@ -22,8 +22,8 @@ var BoardFX = function(renderer, stage){
 // Returns the center coordinate of the square graphic
 BoardFX.prototype.getCanvasLocFromSqrID = function(sqrID){
 	return {
-		x: (sqrID.charCodeAt(0) - 97) * this.sqrWidth + this.sqrWidth/2 + settings.boardSqrBorderSize/2,
-		y: (8 - parseInt(sqrID.charAt(1))) * this.sqrWidth + this.sqrWidth/2 + settings.boardSqrBorderSize/2
+		x: (sqrID.charCodeAt(0) - 97) * this.sqrWidth + this.sqrWidth/2 + settings.boardSqrBorderSize/2 + settings.boardEdgeSize,
+		y: (8 - parseInt(sqrID.charAt(1))) * this.sqrWidth + this.sqrWidth/2 + settings.boardSqrBorderSize/2 + settings.boardEdgeSize
 	};
 };
 
@@ -38,8 +38,9 @@ BoardFX.prototype.renderBoard = function(){
 	}
 
 	var isWhite = false;
-
 	this.boardContainer = new PIXI.Container();
+
+	drawBoardRankAndFileMarkers.call(this);
 
 	for(var row = 0; row <= 7; row++){
 		
@@ -48,8 +49,8 @@ BoardFX.prototype.renderBoard = function(){
 		for(var col = 0; col <= 7; col++){
 			
 			var sqr = new PIXI.Graphics(),
-				posX = col * this.sqrWidth + settings.boardSqrBorderSize/2,
-				posY = row * this.sqrWidth + settings.boardSqrBorderSize/2;
+				posX = col * this.sqrWidth + settings.boardSqrBorderSize/2 + settings.boardEdgeSize,
+				posY = row * this.sqrWidth + settings.boardSqrBorderSize/2 + settings.boardEdgeSize;
 
 			// Draw square
 			sqr.lineStyle(settings.boardSqrBorderSize, settings.boardSqrBorderColor, 1);
@@ -135,5 +136,67 @@ function destroyHighlights(){
 		this.renderer.render(this.stage);
 		this.highlights.destroy();
 		this.highlights = null;
+	}
+}
+
+function drawBoardRankAndFileMarkers(){
+	var boardEdge = new PIXI.Graphics();
+	boardEdge.lineStyle(settings.boardEdgeOutlineSize, settings.boardEdgeOutlineColor, 1);
+	boardEdge.beginFill(settings.boardEdgeColor);
+	boardEdge.drawRect(settings.boardEdgeOutlineSize/2, settings.boardEdgeOutlineSize/2, settings.canvasWidth - settings.boardEdgeOutlineSize, settings.canvasHeight - settings.boardEdgeOutlineSize);
+	boardEdge.endFill();
+
+	this.boardContainer.addChild(boardEdge);
+
+	// Draw rank numerals
+	for(var row = 8; row > 0; row--){
+		var style = new PIXI.TextStyle({
+			    fontFamily: settings.rankAndFileMarkerFont,
+			    fontSize: settings.rankAndFileMarkerFontSize,
+			    fontWeight: settings.rankAndFileMarkerFontWeight,
+			    fill: settings.boardRankAndFileMarkerColor
+			}),
+			leftRankMarker = new PIXI.Text(row, style),
+			rightRankMarker = new PIXI.Text(row, style),
+			nearestAFileSqrLoc = this.getCanvasLocFromSqrID("a" + row),
+			nearestHFileSqrLoc = this.getCanvasLocFromSqrID("h" + row);
+
+		rightRankMarker.anchor.x = .5;
+		rightRankMarker.anchor.y = .5;
+		rightRankMarker.rotation += Math.PI;
+
+		leftRankMarker.x = nearestAFileSqrLoc.x - this.getSqrWidth()/2 - settings.boardSqrBorderSize/2 - settings.boardEdgeSize/2 - leftRankMarker.width/2;
+		rightRankMarker.x = nearestHFileSqrLoc.x + this.getSqrWidth()/2 + settings.boardSqrBorderSize/2 + settings.boardEdgeSize/2;
+		leftRankMarker.y = nearestAFileSqrLoc.y - leftRankMarker.height/2;
+		rightRankMarker.y = nearestHFileSqrLoc.y;
+
+		this.boardContainer.addChild(leftRankMarker);
+		this.boardContainer.addChild(rightRankMarker);
+	}
+
+	// Draw file numerals
+	for(var file = 1; file < 9; file++){
+		var style = new PIXI.TextStyle({
+			    fontFamily: settings.rankAndFileMarkerFont,
+			    fontSize: settings.rankAndFileMarkerFontSize,
+			    fontWeight: settings.rankAndFileMarkerFontWeight,
+			    fill: settings.boardRankAndFileMarkerColor
+			}),
+			topFileMarker = new PIXI.Text(String.fromCharCode(64 + file), style),
+			bottomFileMarker = new PIXI.Text(String.fromCharCode(64 + file), style),
+			nearest8RankSqrLoc = this.getCanvasLocFromSqrID(String.fromCharCode(96 + file) + 8),
+			nearest1RankSqrLoc = this.getCanvasLocFromSqrID(String.fromCharCode(96 + file) + 1);
+
+		topFileMarker.anchor.x = .5;
+		topFileMarker.anchor.y = .5;
+		topFileMarker.rotation += Math.PI;
+
+		topFileMarker.x = nearest8RankSqrLoc.x;
+		bottomFileMarker.x = nearest1RankSqrLoc.x - bottomFileMarker.width/2;
+		topFileMarker.y = nearest8RankSqrLoc.y - this.getSqrWidth()/2 - settings.boardSqrBorderSize/2 - settings.boardEdgeSize/2;
+		bottomFileMarker.y = nearest1RankSqrLoc.y + this.getSqrWidth()/2 + settings.boardSqrBorderSize/2 + settings.boardEdgeSize/2 - bottomFileMarker.height/2;
+
+		this.boardContainer.addChild(topFileMarker);
+		this.boardContainer.addChild(bottomFileMarker);
 	}
 }

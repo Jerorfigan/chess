@@ -10,7 +10,14 @@ var settings = {
 	canvasHeight: 600,                     				// in px
 
 	// Game board
-
+	rankAndFileMarkerFont: 'Lucida Console',
+	rankAndFileMarkerFontSize: 14,                      // in px
+	rankAndFileMarkerFontWeight: 'Bold',
+	boardRankAndFileMarkerColor: 0x7c2216,
+	boardEdgeOutlineSize: 1,                            // in px
+	boardEdgeOutlineColor: 0x000000,
+	boardEdgeSize: 15,                                  // in px
+	boardEdgeColor: 0xFFFFFF,
 	boardSqrBorderSize: 5,                 				// in px
 	boardSqrBorderColor: 0x000000,
 	boardSqrWhiteColor: 0xFFFFFF,
