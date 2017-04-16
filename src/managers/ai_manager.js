@@ -86,6 +86,14 @@ function makeSmartMove(){
 							// Get heuristic value of board state after current move with regard to player making the move
 							var quality = getQualValOfCurrBoardForPlayer.call(thisObj, currPlayer);
 							
+							// Double the heuristic value if this moves causes a checkmate
+							if(gameOverFlags.checkmate){
+								quality *= 2;
+							// Divide the heuristic value by 2 if this moves causes a stalemate
+							}else if(gameOverFlags.stalemate){
+								quality /= 2;
+							}
+
 							// If current player is AI
 							if(currPlayer == thisObj.player){
 								// Add heuristic value to current new move sequence quality property
