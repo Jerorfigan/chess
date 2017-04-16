@@ -127,48 +127,57 @@ function makeSmartMove(){
 							// that of the last sequence in list (which we'll be sorted) depending on whether this move is for the AI or human player
 							if(newMoveSeqList.length == 0){
 								newMoveSeqList.push(currNewMoveSeq);
-							}else if(
-								(currPlayer == thisObj.player && newMoveSeqList[newMoveSeqList.length - 1].quality < currNewMoveSeq.quality) ||
-								(currPlayer != thisObj.player && newMoveSeqList[newMoveSeqList.length - 1].quality > currNewMoveSeq.quality)
-							){
-								newMoveSeqList[newMoveSeqList.length - 1] = currNewMoveSeq;
-
-								var compFunc = null;
-
-								// If player is AI
-								if(currPlayer == thisObj.player){
-									// Sort new move sequence list by descending quality, so that we prioritize searching sequences containing the best moves for AI player
-									compFunc = function(a,b){ return b.quality - a.quality; };
-								}else{
-									// Sort new move sequence list by ascending quality, so that we prioritize searching sequences containing the best moves for opponent player
-									compFunc = function(a,b){ return a.quality - b.quality; };
+							}else{
+								var pruneNewMoveSequence = true;
+								if(newMoveSeqList.length < maxBranch[currNewMoveSeq.moves.length]){
+									newMoveSeqList.push(currNewMoveSeq);
+									pruneNewMoveSequence = false;
+								}else if(
+									(currPlayer == thisObj.player && newMoveSeqList[newMoveSeqList.length - 1].quality < currNewMoveSeq.quality) ||
+									(currPlayer != thisObj.player && newMoveSeqList[newMoveSeqList.length - 1].quality > currNewMoveSeq.quality)
+								){
+									newMoveSeqList[newMoveSeqList.length - 1] = currNewMoveSeq;
+									pruneNewMoveSequence = false;
 								}
 
-								function insertionSortInPlace(compFunc, arrayToSort, startAtIndex){
-									startAtIndex = !startAtIndex ? 0 : startAtIndex;
+								if(!pruneNewMoveSequence){
+									var compFunc = null;
 
-									if(arrayToSort.length > 1){
-										for(var i = startAtIndex; i < arrayToSort.length; i++){
-											for(var j = i - 1; j >= 0; j--){
-												if(compFunc(arrayToSort[i], arrayToSort[j]) > 0){
-													if(i != (j+1)){
+									// If player is AI
+									if(currPlayer == thisObj.player){
+										// Sort new move sequence list by descending quality, so that we prioritize searching sequences containing the best moves for AI player
+										compFunc = function(a,b){ return b.quality - a.quality; };
+									}else{
+										// Sort new move sequence list by ascending quality, so that we prioritize searching sequences containing the best moves for opponent player
+										compFunc = function(a,b){ return a.quality - b.quality; };
+									}
+
+									function insertionSortInPlace(compFunc, arrayToSort, startAtIndex){
+										startAtIndex = !startAtIndex ? 0 : startAtIndex;
+
+										if(arrayToSort.length > 1){
+											for(var i = startAtIndex; i < arrayToSort.length; i++){
+												for(var j = i - 1; j >= 0; j--){
+													if(compFunc(arrayToSort[i], arrayToSort[j]) > 0){
+														if(i != (j+1)){
+															var itemToInsert = arrayToSort[i];
+															arrayToSort.splice(i, 1);
+															arrayToSort.splice(j+1, 0, itemToInsert);
+														}
+														break;
+													}else if(j == 0){
 														var itemToInsert = arrayToSort[i];
 														arrayToSort.splice(i, 1);
-														arrayToSort.splice(j+1, 0, itemToInsert);
+														arrayToSort.splice(0, 0, itemToInsert);
 													}
-													break;
-												}else if(j == 0){
-													var itemToInsert = arrayToSort[i];
-													arrayToSort.splice(i, 1);
-													arrayToSort.splice(0, 0, itemToInsert);
 												}
 											}
 										}
 									}
-								}
 
-								// Sort new move sequence list by descending/ascending quality based on current player 
-								insertionSortInPlace(compFunc, newMoveSeqList, newMoveSeqList.length - 1);
+									// Sort new move sequence list by descending/ascending quality based on current player 
+									insertionSortInPlace(compFunc, newMoveSeqList, newMoveSeqList.length - 1);
+								}
 							}
 
 							// Restore board state to base search state
