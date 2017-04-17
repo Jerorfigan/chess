@@ -23,38 +23,9 @@ var PieceFX = function(renderer, stage, boardFX){
 		"WPf": "white_pawn.png",
 		"WPg": "white_pawn.png",
 		"WPh": "white_pawn.png",
-		"WPaQ": "white_queen.png",
-		"WPbQ": "white_queen.png",
-		"WPcQ": "white_queen.png",
-		"WPdQ": "white_queen.png",
-		"WPeQ": "white_queen.png",
-		"WPfQ": "white_queen.png",
-		"WPgQ": "white_queen.png",
-		"WPhQ": "white_queen.png",
-		"WPaB": "white_bishop.png",
-		"WPbB": "white_bishop.png",
-		"WPcB": "white_bishop.png",
-		"WPdB": "white_bishop.png",
-		"WPeB": "white_bishop.png",
-		"WPfB": "white_bishop.png",
-		"WPgB": "white_bishop.png",
-		"WPhB": "white_bishop.png",
-		"WPaN": "white_knight.png",
-		"WPbN": "white_knight.png",
-		"WPcN": "white_knight.png",
-		"WPdN": "white_knight.png",
-		"WPeN": "white_knight.png",
-		"WPfN": "white_knight.png",
-		"WPgN": "white_knight.png",
-		"WPhN": "white_knight.png",
-		"WPaR": "white_rook.png",
-		"WPbR": "white_rook.png",
-		"WPcR": "white_rook.png",
-		"WPdR": "white_rook.png",
-		"WPeR": "white_rook.png",
-		"WPfR": "white_rook.png",
-		"WPgR": "white_rook.png",
-		"WPhR": "white_rook.png",
+		"WB": "white_bishop.png",
+		"WN": "white_knight.png",
+		"WR": "white_rook.png",
 		"BK": "black_king.png",
 		"BQ": "black_queen.png",
 		"BBc": "black_bishop.png",
@@ -71,38 +42,9 @@ var PieceFX = function(renderer, stage, boardFX){
 		"BPf": "black_pawn.png",
 		"BPg": "black_pawn.png",
 		"BPh": "black_pawn.png",
-		"BPaQ": "black_queen.png",
-		"BPbQ": "black_queen.png",
-		"BPcQ": "black_queen.png",
-		"BPdQ": "black_queen.png",
-		"BPeQ": "black_queen.png",
-		"BPfQ": "black_queen.png",
-		"BPgQ": "black_queen.png",
-		"BPhQ": "black_queen.png",
-		"BPaB": "black_bishop.png",
-		"BPbB": "black_bishop.png",
-		"BPcB": "black_bishop.png",
-		"BPdB": "black_bishop.png",
-		"BPeB": "black_bishop.png",
-		"BPfB": "black_bishop.png",
-		"BPgB": "black_bishop.png",
-		"BPhB": "black_bishop.png",
-		"BPaN": "black_knight.png",
-		"BPbN": "black_knight.png",
-		"BPcN": "black_knight.png",
-		"BPdN": "black_knight.png",
-		"BPeN": "black_knight.png",
-		"BPfN": "black_knight.png",
-		"BPgN": "black_knight.png",
-		"BPhN": "black_knight.png",
-		"BPaR": "black_rook.png",
-		"BPbR": "black_rook.png",
-		"BPcR": "black_rook.png",
-		"BPdR": "black_rook.png",
-		"BPeR": "black_rook.png",
-		"BPfR": "black_rook.png",
-		"BPgR": "black_rook.png",
-		"BPhR": "black_rook.png"
+		"BB": "black_bishop.png",
+		"BN": "black_knight.png",
+		"BR": "black_rook.png"
 	};
 
 	// Graphiccs objects
@@ -154,7 +96,7 @@ PieceFX.prototype.renderPieces = function(boardState){
 	this.renderer.render(this.stage);
 };
 
-PieceFX.prototype.animatePieceUpdates = function(moves, capture){
+PieceFX.prototype.animatePieceUpdates = function(moves, capture, doneCallback, context){
 	var animatingPieces = [],
 		animDurationMS = 1000,
 		elapsedTimeMS = 0,
@@ -207,7 +149,7 @@ PieceFX.prototype.animatePieceUpdates = function(moves, capture){
 			window.requestAnimationFrame(animate);
 		}else{
 			thisObj.piecesContainer.children = R.sort(function(a, b){ return a.zOrder - b.zOrder; }, thisObj.piecesContainer.children);
-			gameEvent.fire("NextTurn");
+			doneCallback.call(context);
 		}	
 	}
 
@@ -263,5 +205,33 @@ function onBoardSetup(eventName, data){
 }
 
 function onPiecesUpdated(eventName, data){
-	this.animatePieceUpdates(data.moves, data.capture);
+	this.animatePieceUpdates(data.moves, data.capture, function(){
+		if(data.promotion){
+			promotePawn.call(this, data.promotion);
+		}
+		gameEvent.fire("NextTurn");
+	}, this);
+}
+
+function promotePawn(data){
+	var pieceTextures = PIXI.loader.resources["assets/img/pieces_tileset.json"].textures,
+		newSprite = new PIXI.Sprite(pieceTextures[this.pieceID2TextureID[data.promotion]]),
+		oldSprite = this.pieceID2sprite[data.oldID],
+		sqrWidth = this.boardFX.getSqrWidth();
+
+	newSprite.width = sqrWidth;
+	newSprite.height = sqrWidth;
+	newSprite.anchor.x = .5;
+	newSprite.anchor.y = .5;
+	newSprite.zOrder = 1;
+	newSprite.x = oldSprite.x;
+	newSprite.y = oldSprite.y;
+
+	this.piecesContainer.removeChild(oldSprite)
+	this.piecesContainer.addChild(newSprite);
+
+	this.renderer.render(this.stage);
+
+	delete this.pieceID2sprite[data.oldID];
+	this.pieceID2sprite[data.newID] = newSprite;
 }

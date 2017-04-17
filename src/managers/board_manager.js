@@ -113,8 +113,9 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 	this.pieces[pieceID].moveHistory[this.turnID] = toSqrID;
 
 	// Check if we need to promote pawn
+	var promotion = null;
 	if(this.getPieceType(pieceID) == "P" && shouldPawnBePromoted.call(this, pieceID)){
-		promotePawn.call(this, pieceID, speculating);
+		promotion = promotePawn.call(this, pieceID, speculating);
 	}
 
 	// We may have opened up new attacks or closed off old attacks for strafing pieces (Queen, Bishop and Rook), so update their attack data as well
@@ -125,7 +126,7 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 
 	if(!speculating){
 		moves.push({pieceID: pieceID, sqrID: toSqrID});
-		gameEvent.fire("PiecesUpdated", {moves: moves, capture: capture});
+		gameEvent.fire("PiecesUpdated", {moves: moves, capture: capture, promotion: promotion});
 	}
 
 	// Check for end of game conditions
@@ -1208,6 +1209,8 @@ function promotePawn(pieceID, speculating){
 	if(!speculating){
 		console.log("Pawn at " + sqrID + " promoted to " + choice);
 	}
+
+	return {oldID: pieceID, newID: promotedPieceID, promotion: owner + choice};
 }
 
 /******************************/
