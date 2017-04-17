@@ -73,125 +73,118 @@ function makeSmartMove(){
 			// Get all possible moves for current player for current board state
 			var allMovesForPlayer = this.boardManager.getAllMovesForPlayer(currPlayer);
 
-			// For each possible move. Wrap in try-catch to allow for special exceptions to get us out of
-			// forEach loop to expedite search.
-			try{
-				R.forEach(function(currPieceMoveSet){
-					var currPiece = currPieceMoveSet.pieceID;
+			// For each possible piece move set
+			for(var i = 0; i < allMovesForPlayer.length; i++){
+				
+				var currPieceMoveSet = allMovesForPlayer[i],
+					currPiece = currPieceMoveSet.pieceID;
 
-					R.forEach(function(currMove){
-						// Set current new move sequence to clone of current move sequence
-						var currNewMoveSeq = R.clone(currMoveSeq);
+				// For each possible piece move
+				for(var j = 0; j < currPieceMoveSet.moves.length; j++){
+					
+					var currMove = currPieceMoveSet.moves[j],
+						currNewMoveSeq = R.clone(currMoveSeq);
 
-						// If current move is valid
-						if(thisObj.boardManager.canPieceMoveToSqr(currPiece, currMove)){
-							// Perform current move
-							var gameOverFlags = thisObj.boardManager.movePieceToSqr(currPiece, currMove, true);
+					// If current move is valid
+					if(thisObj.boardManager.canPieceMoveToSqr(currPiece, currMove)){
+						// Perform current move
+						var gameOverFlags = thisObj.boardManager.movePieceToSqr(currPiece, currMove, true);
 
-							// Get heuristic value of board state after current move with regard to player making the move
-							var quality = getQualValOfCurrBoardForPlayer.call(thisObj, currPlayer);
-							
-							// Double the heuristic value if this moves causes a checkmate
-							if(gameOverFlags.checkmate){
-								quality *= 2;
-							// Divide the heuristic value by 2 if this moves causes a stalemate
-							}else if(gameOverFlags.stalemate){
-								quality /= 2;
-							}
+						// Get heuristic value of board state after current move with regard to player making the move
+						var quality = getQualValOfCurrBoardForPlayer.call(thisObj, currPlayer);
+						
+						// Double the heuristic value if this moves causes a checkmate
+						if(gameOverFlags.checkmate){
+							quality *= 2;
+						// Divide the heuristic value by 2 if this moves causes a stalemate
+						}else if(gameOverFlags.stalemate){
+							quality /= 2;
+						}
 
-							// If current player is AI
-							if(currPlayer == thisObj.player){
-								// Add heuristic value to current new move sequence quality property
-								currNewMoveSeq.quality += quality;
-							}else{
-								// Subtract heuristic value from current new move sequence quality property
-								currNewMoveSeq.quality -= quality;
-							}
+						// If current player is AI
+						if(currPlayer == thisObj.player){
+							// Add heuristic value to current new move sequence quality property
+							currNewMoveSeq.quality += quality;
+						}else{
+							// Subtract heuristic value from current new move sequence quality property
+							currNewMoveSeq.quality -= quality;
+						}
 
-							// Set endgame property on current new move sequence
-							currNewMoveSeq.endgame = gameOverFlags.checkmate || gameOverFlags.stalemate;
+						// Set endgame property on current new move sequence
+						currNewMoveSeq.endgame = gameOverFlags.checkmate || gameOverFlags.stalemate;
 
-							// Insert current move into current new move sequence
-							currNewMoveSeq.moves.push({piece: currPiece, to: currMove});
+						// Insert current move into current new move sequence
+						currNewMoveSeq.moves.push({piece: currPiece, to: currMove});
 
-							// Is there a checkmate one move away?
-							if(gameOverFlags.checkmate && currNewMoveSeq.moves.length == 1){
-								// No brainer, do it
-								moveSeqList = [];
-								newMoveSeqList = [];
+						// Is there a checkmate one move away?
+						if(gameOverFlags.checkmate && currNewMoveSeq.moves.length == 1){
+							// No brainer, do it
+							moveSeqList = [];
+							newMoveSeqList = [];
+							newMoveSeqList.push(currNewMoveSeq);
+							throw "CheckmateFoundOneMoveAway";
+						}
+
+						// Insert current new move sequence into new move sequence list if list is empty or its quality value is greater than/less than 
+						// that of the last sequence in list (which we'll be sorted) depending on whether this move is for the AI or human player
+						if(newMoveSeqList.length == 0){
+							newMoveSeqList.push(currNewMoveSeq);
+						}else{
+							var pruneNewMoveSequence = true;
+							if(newMoveSeqList.length < maxBranch[currNewMoveSeq.moves.length]){
 								newMoveSeqList.push(currNewMoveSeq);
-								throw "CheckmateFoundOneMoveAway";
+								pruneNewMoveSequence = false;
+							}else if(
+								(currPlayer == thisObj.player && newMoveSeqList[newMoveSeqList.length - 1].quality < currNewMoveSeq.quality) ||
+								(currPlayer != thisObj.player && newMoveSeqList[newMoveSeqList.length - 1].quality > currNewMoveSeq.quality)
+							){
+								newMoveSeqList[newMoveSeqList.length - 1] = currNewMoveSeq;
+								pruneNewMoveSequence = false;
 							}
 
-							// Insert current new move sequence into new move sequence list if list is empty or its quality value is greater than/less than 
-							// that of the last sequence in list (which we'll be sorted) depending on whether this move is for the AI or human player
-							if(newMoveSeqList.length == 0){
-								newMoveSeqList.push(currNewMoveSeq);
-							}else{
-								var pruneNewMoveSequence = true;
-								if(newMoveSeqList.length < maxBranch[currNewMoveSeq.moves.length]){
-									newMoveSeqList.push(currNewMoveSeq);
-									pruneNewMoveSequence = false;
-								}else if(
-									(currPlayer == thisObj.player && newMoveSeqList[newMoveSeqList.length - 1].quality < currNewMoveSeq.quality) ||
-									(currPlayer != thisObj.player && newMoveSeqList[newMoveSeqList.length - 1].quality > currNewMoveSeq.quality)
-								){
-									newMoveSeqList[newMoveSeqList.length - 1] = currNewMoveSeq;
-									pruneNewMoveSequence = false;
+							if(!pruneNewMoveSequence){
+								var compFunc = null;
+
+								// If player is AI
+								if(currPlayer == thisObj.player){
+									// Sort new move sequence list by descending quality, so that we prioritize searching sequences containing the best moves for AI player
+									compFunc = function(a,b){ return b.quality - a.quality; };
+								}else{
+									// Sort new move sequence list by ascending quality, so that we prioritize searching sequences containing the best moves for opponent player
+									compFunc = function(a,b){ return a.quality - b.quality; };
 								}
 
-								if(!pruneNewMoveSequence){
-									var compFunc = null;
+								function insertionSortInPlace(compFunc, arrayToSort, startAtIndex){
+									startAtIndex = !startAtIndex ? 0 : startAtIndex;
 
-									// If player is AI
-									if(currPlayer == thisObj.player){
-										// Sort new move sequence list by descending quality, so that we prioritize searching sequences containing the best moves for AI player
-										compFunc = function(a,b){ return b.quality - a.quality; };
-									}else{
-										// Sort new move sequence list by ascending quality, so that we prioritize searching sequences containing the best moves for opponent player
-										compFunc = function(a,b){ return a.quality - b.quality; };
-									}
-
-									function insertionSortInPlace(compFunc, arrayToSort, startAtIndex){
-										startAtIndex = !startAtIndex ? 0 : startAtIndex;
-
-										if(arrayToSort.length > 1){
-											for(var i = startAtIndex; i < arrayToSort.length; i++){
-												for(var j = i - 1; j >= 0; j--){
-													if(compFunc(arrayToSort[i], arrayToSort[j]) > 0){
-														if(i != (j+1)){
-															var itemToInsert = arrayToSort[i];
-															arrayToSort.splice(i, 1);
-															arrayToSort.splice(j+1, 0, itemToInsert);
-														}
-														break;
-													}else if(j == 0){
+									if(arrayToSort.length > 1){
+										for(var i = startAtIndex; i < arrayToSort.length; i++){
+											for(var j = i - 1; j >= 0; j--){
+												if(compFunc(arrayToSort[i], arrayToSort[j]) > 0){
+													if(i != (j+1)){
 														var itemToInsert = arrayToSort[i];
 														arrayToSort.splice(i, 1);
-														arrayToSort.splice(0, 0, itemToInsert);
+														arrayToSort.splice(j+1, 0, itemToInsert);
 													}
+													break;
+												}else if(j == 0){
+													var itemToInsert = arrayToSort[i];
+													arrayToSort.splice(i, 1);
+													arrayToSort.splice(0, 0, itemToInsert);
 												}
 											}
 										}
 									}
-
-									// Sort new move sequence list by descending/ascending quality based on current player 
-									insertionSortInPlace(compFunc, newMoveSeqList, newMoveSeqList.length - 1);
 								}
-							}
 
-							// Restore board state to base search state
-							thisObj.boardManager.loadBoardState(baseSearchBoardState);
+								// Sort new move sequence list by descending/ascending quality based on current player 
+								insertionSortInPlace(compFunc, newMoveSeqList, newMoveSeqList.length - 1);
+							}
 						}
-					}, currPieceMoveSet.moves);
-				}, allMovesForPlayer);
-			}catch(e){
-				// Swallow special error messages designed to get us out of above forEach loop to expedite search.
-				// Re-throw anything else.
-				switch(e){
-					case "CheckmateFoundOneMoveAway": break;
-					default: 
-						throw e;
+
+						// Restore board state to base search state
+						thisObj.boardManager.loadBoardState(baseSearchBoardState);
+					}
 				}
 			}
 
