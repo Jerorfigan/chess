@@ -74,7 +74,8 @@ function makeSmartMove(){
 			var allMovesForPlayer = this.boardManager.getAllMovesForPlayer(currPlayer);
 
 			// For each possible piece move set
-			for(var i = 0; i < allMovesForPlayer.length; i++){
+			var stopSearchingForMove = false;
+			for(var i = 0; i < allMovesForPlayer.length && !stopSearchingForMove; i++){
 				
 				var currPieceMoveSet = allMovesForPlayer[i],
 					currPiece = currPieceMoveSet.pieceID;
@@ -122,7 +123,8 @@ function makeSmartMove(){
 							moveSeqList = [];
 							newMoveSeqList = [];
 							newMoveSeqList.push(currNewMoveSeq);
-							throw "CheckmateFoundOneMoveAway";
+							stopSearchingForMove = true;
+							break;
 						}
 
 						// Insert current new move sequence into new move sequence list if list is empty or its quality value is greater than/less than 
