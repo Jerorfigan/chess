@@ -769,7 +769,7 @@ BoardManager.prototype.getPieceMetricsForPlayer = function(player){
 	}
 
 	// Find out if the opponent is in check for free (attacker cannot be captured next turn)
-	var oppInCheck = this.isPlayerInCheck(opponent),
+	var oppInCheck = isPlayerInCheck.call(this, opponent),
 		attacker = oppInCheck ? this.getPiecesAttackingPiece(opponent + "K")[0] : null,
 		attackerCantBeCaptured = attacker ? this.getPiecesAttackingPiece(attacker).length == 0 : null;
 
