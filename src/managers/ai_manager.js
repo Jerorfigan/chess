@@ -336,6 +336,16 @@ function getQualValOfCurrBoardForPlayer(player){
 	// Factor in number of squares attacked and number of squares defended
 	quality += (pieceMetrics.numSqrsAttacked + pieceMetrics.numSqrsDefended) * (settings.aiPriorityLevel_CaptureAndDefend/100);
 
+	// Factor in whether the opponent king is in check for free (attacker cannot be captured), to encourage putting the enemy king into
+	// check
+	quality += pieceMetrics.isOppInCheckForFree ? settings.aiRewardAmount_OpponentInCheckForFree : 0;
+
+	// Factor in the number of moves denied to opponent king to encourage checkmate progression
+	quality += (8 - pieceMetrics.numberOfMovesAvailToOppKing) * settings.aiRewardAmount_OpponentKingMoveDenied;
+
+	// Factor in the number of moves available to allied king to encourage checkmate avoidance
+	quality += pieceMetrics.numberOfMovesAvailToKing * settings.aiRewardAmount_AlliedKingMovePreserved;
+
 	return quality;
 }
 

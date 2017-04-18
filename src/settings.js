@@ -31,7 +31,7 @@ var settings = {
 	aiPlayer: "B",
 
 	// AI settings
-	aiSkillLevel: 3,									// 1 (novice), 2 (intermediate), 3 (expert)
+	aiSkillLevel: 1,									// 1 (novice), 2 (intermediate), 3 (expert)
 	piecePointValueQueen: 6,
 	piecePointValueBishop: 3,
 	piecePointValueKnight: 3,
@@ -44,7 +44,10 @@ var settings = {
 	piecePointValuePawnTraveledFiveRanks: 5,
 	aiPriorityLevel_GainMaterialAdvantage: 100,         // 0% - 100%
 	aiPriorityLevel_ProtectKing: 5, 					// 0% - 100%
-	aiPriorityLevel_CaptureAndDefend: 10                // 0% - 100%
+	aiPriorityLevel_CaptureAndDefend: 10,               // 0% - 100%
+	aiRewardAmount_OpponentInCheckForFree: 10,
+	aiRewardAmount_OpponentKingMoveDenied: 2/3,
+	aiRewardAmount_AlliedKingMovePreserved: 1/5
 };
 
 module.exports = settings;

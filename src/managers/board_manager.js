@@ -729,7 +729,10 @@ BoardManager.prototype.getPieceMetricsForPlayer = function(player){
 			capturedCnt: this.getPieceCntForPlayer(player, "CAPTURED"),
 			attackedCnt: this.getPieceCntForPlayer(player, "ATTACKED"),
 			piecesAdjacentToKing: [],
-			pawns: this.getPieceCntForPlayer(player, "UNCAPTURED", ["K","Q","B","N","R"]).pawns
+			pawns: this.getPieceCntForPlayer(player, "UNCAPTURED", ["K","Q","B","N","R"]).pawns,
+			isOppInCheckForFree: false,
+			numberOfMovesAvailToKing: 0,
+			numberOfMovesAvailToOppKing: 0
 		},
 		opponent = this.getOtherPlayer(player),
 		thisObj = this;
@@ -764,6 +767,19 @@ BoardManager.prototype.getPieceMetricsForPlayer = function(player){
 			if(adjacentPieceID) metrics.piecesAdjacentToKing.push(this.getPieceType(adjacentPieceID));
 		}
 	}
+
+	// Find out if the opponent is in check for free (attacker cannot be captured next turn)
+	var oppInCheck = this.isPlayerInCheck(opponent),
+		attacker = oppInCheck ? this.getPiecesAttackingPiece(opponent + "K")[0] : null,
+		attackerCantBeCaptured = attacker ? this.getPiecesAttackingPiece(attacker).length == 0 : null;
+
+	if(oppInCheck){
+		metrics.isOppInCheckForFree = attackerCantBeCaptured;
+	}
+
+	// Count moves avail to allied king and enemy king
+	metrics.numberOfMovesAvailToKing = this.getSqrsPieceCan(player + "K").length;
+	metrics.numberOfMovesAvailToOppKing = this.getSqrsPieceCan(opponent + "K").length;
 
 	return metrics;
 };
