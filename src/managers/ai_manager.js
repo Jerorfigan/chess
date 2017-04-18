@@ -36,13 +36,13 @@ function makeSmartMove(){
 		moveSeqList = [dummyMoveSeq],
 	// Set [depth threshold]
 	// Set [branch threshold]
-		maxDepth = settings.aiSkillLevel == 1 ? 2 : (settings.aiSkillLevel == 2 ? 3 : 4),
+		maxDepth = settings.aiSkillLevel == 1 ? 4 : (settings.aiSkillLevel == 2 ? 5 : 6),
 		maxBranch = 
 			settings.aiSkillLevel == 1 ? 
-				{"1": 20, "2": 5} : 
+				{"1": 20, "2": 1, "3": 1, "4": 1} : 
 				(settings.aiSkillLevel == 2 ? 
-					{"1": 13, "2": 5, "3": 1} : 
-					{"1": 10, "2": 5, "3": 1, "4": 1}),
+					{"1": 20, "2": 1, "3": 1, "4": 1, "5": 1} : 
+					{"1": 20, "2": 1, "3": 1, "4": 1, "5": 1, "6": 1}),
 	// Save current board state as initial board state
 		initialBoardState = this.boardManager.saveBoardState(),
 		thisObj = this;
@@ -93,13 +93,23 @@ function makeSmartMove(){
 
 						// Get heuristic value of board state after current move with regard to player making the move
 						var quality = getQualValOfCurrBoardForPlayer.call(thisObj, currPlayer);
-						
-						// Double the heuristic value if this moves causes a checkmate
-						if(gameOverFlags.checkmate){
-							quality *= 2;
-						// Divide the heuristic value by 2 if this moves causes a stalemate
+
+						// Is there a checkmate one move away?
+						if(gameOverFlags.checkmate && currNewMoveSeq.moves.length == 0){
+							// No brainer, do it
+							moveSeqList = [];
+							newMoveSeqList = [];
+							newMoveSeqList.push(currNewMoveSeq);
+							stopSearchingForMove = true;
+							break;
+						}						
+						// Else if this move is a checkmate that is 2 or more moves away, diminishingly increase quality based on number of moves
+						// away
+						else if(gameOverFlags.checkmate){
+							quality *= ((2/(currNewMoveSeq.moves.length + 1)) + 1);
+						// Else if this move is a stalemate, diminishingly decrease quality based on number of moves away
 						}else if(gameOverFlags.stalemate){
-							quality /= 2;
+							quality /= ((2/(currNewMoveSeq.moves.length + 1)) + 1);
 						}
 
 						// If current player is AI
@@ -116,16 +126,6 @@ function makeSmartMove(){
 
 						// Insert current move into current new move sequence
 						currNewMoveSeq.moves.push({piece: currPiece, to: currMove});
-
-						// Is there a checkmate one move away?
-						if(gameOverFlags.checkmate && currNewMoveSeq.moves.length == 1){
-							// No brainer, do it
-							moveSeqList = [];
-							newMoveSeqList = [];
-							newMoveSeqList.push(currNewMoveSeq);
-							stopSearchingForMove = true;
-							break;
-						}
 
 						// Insert current new move sequence into new move sequence list if list is empty or its quality value is greater than/less than 
 						// that of the last sequence in list (which we'll be sorted) depending on whether this move is for the AI or human player
@@ -275,33 +275,56 @@ function getQualValOfCurrBoardForPlayer(player){
 		pieceType2PointValue = {"Q": settings.piecePointValueQueen, "B": settings.piecePointValueBishop, "N": settings.piecePointValueKnight,
 			"R": settings.piecePointValueRook, "P": settings.piecePointValuePawn};
 
-	// Factor in material advantage
+	/* Factor in material advantage */
+
 	var materialAdvantage = 0;
+	
+	// Add up point value of allied uncaptured pieces
 	materialAdvantage += 
 		pieceMetrics.uncapturedCnt.queens * settings.piecePointValueQueen + 
 		pieceMetrics.uncapturedCnt.bishops * settings.piecePointValueBishop + 
 		pieceMetrics.uncapturedCnt.knights * settings.piecePointValueKnight +
 		pieceMetrics.uncapturedCnt.rooks * settings.piecePointValueRook +
-		pieceMetrics.uncapturedCnt.pawns * settings.piecePointValuePawn;
+		// Pawn scoring is based on how many ranks it has traveled, as we want to prioritize pawn progression
+		pieceMetrics.pawns["5"] * settings.piecePointValuePawnTraveledFiveRanks +
+		pieceMetrics.pawns["4"] * settings.piecePointValuePawnTraveledFourRanks +
+		pieceMetrics.pawns["3"] * settings.piecePointValuePawnTraveledThreeRanks +
+		pieceMetrics.pawns["2"] * settings.piecePointValuePawnTraveledTwoRanks +
+		pieceMetrics.pawns["1"] * settings.piecePointValuePawnTraveledOneRank +
+		pieceMetrics.pawns["0"] * settings.piecePointValuePawn;
 
+	// Add up point value of opponent captured pieces
 	materialAdvantage += 
 		oppCapPieceCapturedCnt.queens * settings.piecePointValueQueen + 
 		oppCapPieceCapturedCnt.bishops * settings.piecePointValueBishop + 
 		oppCapPieceCapturedCnt.knights * settings.piecePointValueKnight +
 		oppCapPieceCapturedCnt.rooks * settings.piecePointValueRook +
-		oppCapPieceCapturedCnt.pawns * settings.piecePointValuePawn;
+		// Captured pawn scoring is based on how many ranks it had traveled when it was captured, as we want
+		// to prioritize capturing pawns closer to promotion
+		oppCapPieceCapturedCnt.pawns["5"] * settings.piecePointValuePawnTraveledFiveRanks +
+		oppCapPieceCapturedCnt.pawns["4"] * settings.piecePointValuePawnTraveledFourRanks +
+		oppCapPieceCapturedCnt.pawns["3"] * settings.piecePointValuePawnTraveledThreeRanks +
+		oppCapPieceCapturedCnt.pawns["2"] * settings.piecePointValuePawnTraveledTwoRanks +
+		oppCapPieceCapturedCnt.pawns["1"] * settings.piecePointValuePawnTraveledOneRank +
+		oppCapPieceCapturedCnt.pawns["0"] * settings.piecePointValuePawn;
 
+	// Subtract point value of allied threatened pieces
 	materialAdvantage += 
-		-pieceMetrics.attackedCnt.queens * settings.piecePointValueQueen + 
-		-pieceMetrics.attackedCnt.bishops * settings.piecePointValueBishop + 
-		-pieceMetrics.attackedCnt.knights * settings.piecePointValueKnight +
-		-pieceMetrics.attackedCnt.rooks * settings.piecePointValueRook +
-		-pieceMetrics.attackedCnt.pawns * settings.piecePointValuePawn;
+		pieceMetrics.attackedCnt.queens * -settings.piecePointValueQueen + 
+		pieceMetrics.attackedCnt.bishops * -settings.piecePointValueBishop + 
+		pieceMetrics.attackedCnt.knights * -settings.piecePointValueKnight +
+		pieceMetrics.attackedCnt.rooks * -settings.piecePointValueRook +
+		// Pawn scoring is based on how many ranks it has traveled, as we want to prioritize pawn progression
+		pieceMetrics.attackedCnt.pawns["5"] * -settings.piecePointValuePawnTraveledFiveRanks +
+		pieceMetrics.attackedCnt.pawns["4"] * -settings.piecePointValuePawnTraveledFourRanks +
+		pieceMetrics.attackedCnt.pawns["3"] * -settings.piecePointValuePawnTraveledThreeRanks +
+		pieceMetrics.attackedCnt.pawns["2"] * -settings.piecePointValuePawnTraveledTwoRanks +
+		pieceMetrics.attackedCnt.pawns["1"] * -settings.piecePointValuePawnTraveledOneRank +
+		pieceMetrics.attackedCnt.pawns["0"] * -settings.piecePointValuePawn;
 
 	quality += materialAdvantage * (settings.aiPriorityLevel_GainMaterialAdvantage/100);
 
-	// Factor in point value of pieces adjacent to king to promote protecting the king. Divide by 6 so that we
-	// weight material advantage higher.
+	// Factor in point value of pieces adjacent to king to promote protecting the king
 	var pointTotalOfPiecesAdjacentToKing = 0;
 	R.forEach(function(pieceType){
 		pointTotalOfPiecesAdjacentToKing += pieceType2PointValue[pieceType];
@@ -309,17 +332,7 @@ function getQualValOfCurrBoardForPlayer(player){
 
 	quality += pointTotalOfPiecesAdjacentToKing * (settings.aiPriorityLevel_ProtectKing/100);
 
-	// Factor in total squares moved by pawns to promote pawn progression, Divive by 8 so that we weight material 
-	// advantage higher.
-	var totalSqrsMovedByPawns = 0;
-	R.forEachObjIndexed(function(cnt, rank){
-		totalSqrsMovedByPawns += player == "W" ? cnt * (parseInt(rank) - 2) : cnt * (7 - parseInt(rank)); 
-	}, pieceMetrics.pawnCntByRank);
-
-	quality += totalSqrsMovedByPawns * (settings.aiPriorityLevel_PromotePawns/100);
-
-	// Factor in number of squares attacked and number of squares defended. Divive by 10 so that we weight
-	// material advantage higher.
+	// Factor in number of squares attacked and number of squares defended
 	quality += (pieceMetrics.numSqrsAttacked + pieceMetrics.numSqrsDefended) * (settings.aiPriorityLevel_CaptureAndDefend/100);
 
 	return quality;

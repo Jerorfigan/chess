@@ -111,6 +111,7 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 	
 	// Update move history of piece that moved
 	this.pieces[pieceID].moveHistory[this.turnID] = toSqrID;
+	this.pieces[pieceID].moveHistory.moveList.push({turnID: this.turnID, sqrID: toSqrID});
 
 	// Check if we need to promote pawn
 	var promotion = null;
@@ -648,7 +649,7 @@ BoardManager.prototype.getPieceMoveHistory = function(pieceID){
  */
 BoardManager.prototype.getPieceCntForPlayer = function(player, which){
 	var pieces = this.getAllPiecesForPlayer(player, which),
-		pieceCnt = {total: 0, queens: 0, bishops: 0, knights: 0, rooks: 0, pawns: 0},
+		pieceCnt = {total: 0, queens: 0, bishops: 0, knights: 0, rooks: 0, pawns: {total: 0, "5": 0, "4": 0, "3": 0, "2": 0, "1": 0, "0": 0}},
 		thisObj = this;
 
 	R.forEach(function(pieceID){
@@ -657,7 +658,19 @@ BoardManager.prototype.getPieceCntForPlayer = function(player, which){
 			case "B": pieceCnt.bishops++; break;
 			case "N": pieceCnt.knights++; break;
 			case "R": pieceCnt.rooks++; break;
-			case "P": pieceCnt.pawns++; break;
+			case "P": 
+				// With pawns, breakout count by number of ranks traveled, since its important for AI heuristic. Use move history
+				// to get the pawn's current rank in case it's been captured, in which case we'll be getting its last
+				// occupied rank.
+				var moveHistory = thisObj.getPieceMoveHistory(pieceID),
+					lastMove = moveHistory.moveList.length > 0 ? moveHistory.moveList[moveHistory.moveList.length - 1] : null,
+					currOrLastOccupiedSqrID = lastMove ? lastMove.sqrID : STARTING_SQRS[pieceID],
+					currOrLastOccupiedRankNumeral = getSqrRank.call(thisObj, currOrLastOccupiedSqrID, true),
+					numRanksTraveled = player == "W" ? currOrLastOccupiedRankNumeral - 2 : 7 - currOrLastOccupiedRankNumeral;
+
+				pieceCnt.pawns[numRanksTraveled]++;
+				pieceCnt.pawns.total++;
+			break;
 		}
 		pieceCnt.total++;
 	}, pieces);
@@ -716,7 +729,7 @@ BoardManager.prototype.getPieceMetricsForPlayer = function(player){
 			capturedCnt: this.getPieceCntForPlayer(player, "CAPTURED"),
 			attackedCnt: this.getPieceCntForPlayer(player, "ATTACKED"),
 			piecesAdjacentToKing: [],
-			pawnCntByRank: {"8": 0, "7": 0, "6": 0, "5": 0, "4": 0, "3": 0, "2": 0, "1": 0}
+			pawns: this.getPieceCntForPlayer(player, "UNCAPTURED", ["K","Q","B","N","R"]).pawns
 		},
 		opponent = this.getOtherPlayer(player),
 		thisObj = this;
@@ -751,14 +764,6 @@ BoardManager.prototype.getPieceMetricsForPlayer = function(player){
 			if(adjacentPieceID) metrics.piecesAdjacentToKing.push(this.getPieceType(adjacentPieceID));
 		}
 	}
-
-	// Count pawns by rank
-	var pawns = this.getAllPiecesForPlayer(player, "UNCAPTURED", ["K", "Q", "B", "N", "R"]);
-
-	R.forEach(function(pieceID){
-		var rank = getSqrRank.call(thisObj, thisObj.getSqrWithPiece(pieceID));
-		metrics.pawnCntByRank[rank]++;
-	}, pawns);
 
 	return metrics;
 };
@@ -1284,7 +1289,7 @@ function initPieces(){
 	R.forEachObjIndexed(function(startingSqrID, startingPieceID){
 		thisObj.pieces[startingPieceID] = {
 				sqrID: startingSqrID,
-				moveHistory: {}
+				moveHistory: {moveList:[]}
 			};
 	}, STARTING_SQRS);
 }

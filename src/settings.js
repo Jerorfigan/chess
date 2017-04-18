@@ -31,15 +31,19 @@ var settings = {
 	aiPlayer: "B",
 
 	// AI settings
-	aiSkillLevel: 1,									// 1 (novice), 2 (intermediate), 3 (expert)
+	aiSkillLevel: 3,									// 1 (novice), 2 (intermediate), 3 (expert)
 	piecePointValueQueen: 6,
 	piecePointValueBishop: 3,
 	piecePointValueKnight: 3,
 	piecePointValueRook: 4,
 	piecePointValuePawn: 1,
+	piecePointValuePawnTraveledOneRank: 1,
+	piecePointValuePawnTraveledTwoRanks: 2,
+	piecePointValuePawnTraveledThreeRanks: 3,
+	piecePointValuePawnTraveledFourRanks: 4,
+	piecePointValuePawnTraveledFiveRanks: 5,
 	aiPriorityLevel_GainMaterialAdvantage: 100,         // 0% - 100%
-	aiPriorityLevel_ProtectKing: 16, 					// 0% - 100%
-	aiPriorityLevel_PromotePawns: 12.5,					// 0% - 100%
+	aiPriorityLevel_ProtectKing: 5, 					// 0% - 100%
 	aiPriorityLevel_CaptureAndDefend: 10                // 0% - 100%
 };
 
