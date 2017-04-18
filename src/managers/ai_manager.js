@@ -99,6 +99,7 @@ function makeSmartMove(){
 							// No brainer, do it
 							moveSeqList = [];
 							newMoveSeqList = [];
+							currNewMoveSeq.endgame = true;
 							currNewMoveSeq.moves.push({piece: currPiece, to: currMove});
 							newMoveSeqList.push(currNewMoveSeq);
 							stopSearchingForMove = true;
