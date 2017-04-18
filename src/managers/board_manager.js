@@ -486,8 +486,8 @@ BoardManager.prototype.getAllMovesForPlayer = function(player){
 BoardManager.prototype.isValidMove = function(fromSqrID, toSqrID){
 	validateSqrID(fromSqrID);
 	validateSqrID(toSqrID);
-	if(this.isSquareEmpty(fromSqrID) || this.getPieceOwner(this.getPieceAtSqr(fromSqrID)) != this.whosTurnIsIt()){
-		throw "Attempt to move from square that is empty or contains opponent piece";
+	if(this.isSquareEmpty(fromSqrID)){
+		throw "Attempt to move from square that is empty";
 	}
 
 	var player = this.whosTurnIsIt(),
