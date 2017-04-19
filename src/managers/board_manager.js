@@ -295,11 +295,7 @@ BoardManager.prototype.getSqrsPieceCan = function(pieceID, action){
 	}
 
 	function getMoveCntFromHistory(pieceMoveHistory){
-		var moveCnt = 0;
-		R.forEachObjIndexed(function(sqrID, turnID){
-			moveCnt++;
-		}, pieceMoveHistory);
-		return moveCnt;
+		return pieceMoveHistory.moveList.length;
 	}
 
 	function addCastlingOffsets(offsets){
