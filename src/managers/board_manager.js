@@ -115,12 +115,12 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 		}
 	}
 
-	// Add the piece to square it moved to
-	addPieceToBoardAtSqr.call(this, pieceID, toSqrID);
-	
 	// Update move history of piece that moved
 	this.pieces[pieceID].moveHistory[this.turnID] = toSqrID;
 	this.pieces[pieceID].moveHistory.moveList.push({turnID: this.turnID, sqrID: toSqrID});
+
+	// Add the piece to square it moved to
+	addPieceToBoardAtSqr.call(this, pieceID, toSqrID);
 
 	// Check if we need to promote pawn
 	var promotion = null;
