@@ -209,7 +209,7 @@ function onPiecesUpdated(eventName, data){
 		if(data.promotion){
 			promotePawn.call(this, data.promotion);
 		}
-		gameEvent.fire("NextTurn");
+		gameEvent.fire("AnimatePiecesFinished");
 	}, this);
 }
 

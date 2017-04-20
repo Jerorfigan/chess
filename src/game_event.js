@@ -31,5 +31,6 @@ gameEvent.create("NextTurn");
 gameEvent.create("PieceCaptured");
 gameEvent.create("Checkmate");
 gameEvent.create("Stalemate");
+gameEvent.create("AnimatePiecesFinished");
 
 module.exports = gameEvent;

@@ -9,6 +9,8 @@ var STARTING_SQRS = {
 
 var BoardManager = function(){	
 	this.resetBoard();
+
+	gameEvent.subscribe("AnimatePiecesFinished", onAnimatePiecesFinished, this);
 };
 
 /*********/
@@ -28,6 +30,13 @@ BoardManager.prototype.resetBoard = function(){
 
 	// Init turn counter
 	this.turnID = 1;
+
+	this.boardStatus = {
+		checkmate: false,
+		stalemate: false,
+		winningPlayer: null,
+		playerInCheck: null
+	};
 
 	gameEvent.fire("BoardSetup", {pieces: this.board2piece, board2attacker: this.board2attacker});
 };
@@ -131,29 +140,24 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 	}
 
 	// Check for end of game conditions
+	this.boardStatus.checkmate = false;
+	this.boardStatus.stalemate = false;
+	this.boardStatus.winningPlayer = null;
+	this.boardStatus.playerInCheck = null;
+
 	if(isPlayerInCheck.call(this, opponent) && hasCheckmateOccurred.call(this)){
-		if(!speculating){
-			console.log("Checkmate. " + playerMovingPiece + " wins.");
-			gameEvent.fire("Checkmate", {winningPlayer: playerMovingPiece});
-		}
-		return {checkmate: true, stalemate: false};
+		this.boardStatus.checkmate = true;
+		this.boardStatus.winningPlayer = playerMovingPiece;
 	}else if(hasStalemateOccured.call(this)){
-		if(!speculating){
-			console.log("Stalemate.");
-			gameEvent.fire("Stalemate");
-		}
-		return {checkmate: false, stalemate: true};
+		this.boardStatus.stalemate = true;
 	}else if(isPlayerInCheck.call(this, opponent)){
-		if(!speculating){
-			// Alert player who is in check
-			console.log(opponent + " is in check");
-		}
+		this.boardStatus.playerInCheck = opponent;
 	}
 
 	// Increment turn, needs to be the last thing we do
 	this.turnID++;
 
-	return {checkmate: false, stalemate: false};
+	return {checkmate: this.boardStatus.checkmate, stalemate: this.boardStatus.stalemate};
 };
 
 /**
@@ -1368,5 +1372,28 @@ function validateSqrID(sqrID){
 function validatePlayer(player){
 	if(player != "W" && player != "B"){
 		throw "Invalid player: " + player;
+	}
+}
+
+/******************/
+/* Event handlers */
+/******************/
+
+/**
+ * Handles the event signifying the animations for the pieces moving/being captured are complete,
+ * and the game logic can continue.
+ */
+function onAnimatePiecesFinished(){
+	if(this.boardStatus.checkmate){
+		console.log("Checkmate. " + this.boardStatus.winningPlayer + " wins.");
+		gameEvent.fire("Checkmate", {winningPlayer: this.boardStatus.winningPlayer});
+	}else if(this.boardStatus.stalemate){
+		console.log("Stalemate.");
+		gameEvent.fire("Stalemate");
+	}else{
+		if(this.boardStatus.playerInCheck){
+			console.log(this.boardStatus.playerInCheck + " is in check");
+		}
+		gameEvent.fire("NextTurn");
 	}
 }
