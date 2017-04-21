@@ -1,6 +1,7 @@
 var R = require("../../lib/ramda.min.js");
 var gameEvent = require("../game_event.js");
 var settings = require("../settings.js");
+var ui = require("../user_prompt.js");
 
 var STARTING_SQRS = {
 	WK: "e1", WQ: "d1", WBc: "c1", WBf: "f1",  WNb: "b1", WNg: "g1", WRa: "a1", WRh: "h1", WPa: "a2", WPb: "b2", WPc: "c2", WPd: "d2", WPe: "e2", WPf: "f2", WPg: "g2", WPh: "h2",
@@ -41,9 +42,9 @@ BoardManager.prototype.resetBoard = function(){
 	gameEvent.fire("BoardSetup", {pieces: this.board2piece, board2attacker: this.board2attacker});
 };
 
-/**************************************/
+/**********************************************/
 /* Move control/discovery/validation routines */
-/**************************************/
+/**********************************************/
 
 /**
  * Moves the piece the specified piece to the specified square. Returns game-over flags following the move as:
@@ -68,7 +69,7 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 		capture = null;
 
 	if(!speculating){
-		console.log(playerTitle + ": Moving " + pieceID + " from " + fromSqrID + " to " + toSqrID);
+		ui.log(playerTitle + ": Moving " + pieceID + " from " + fromSqrID + " to " + toSqrID);
 	}
 
 	// Remove piece from square it moved from
@@ -80,7 +81,7 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 		removePieceFromBoard.call(this, capturedPieceID);
 		if(!speculating){
 			capture = {pieceID: capturedPieceID};
-			console.log(pieceID + " captures " + capturedPieceID);
+			ui.log(pieceID + " captures " + capturedPieceID);
 			gameEvent.fire("PieceCaptured", {capturedPieceID: capturedPieceID, sqrID: toSqrID});
 		}
 	// Did we performed an En passant capture?
@@ -93,7 +94,7 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 		removePieceFromBoard.call(this, capturedPieceID);
 		if(!speculating){
 			capture = {pieceID: capturedPieceID};
-			console.log(pieceID + " captures " + capturedPieceID);
+			ui.log(pieceID + " captures " + capturedPieceID);
 			gameEvent.fire("PieceCaptured", {capturedPieceID: capturedPieceID, sqrID: targetOfEnPassantAttackSqrID});
 		}
 	// Did we castle?
@@ -111,7 +112,7 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 
 		if(!speculating){
 			moves.push({pieceID: rookPieceID, sqrID: rookSqrIDAfterCastling});
-			console.log(playerMovingPiece + " castled " + (castleKingside ? "kingside" : "queenside"));
+			ui.log(playerMovingPiece + " castled " + (castleKingside ? "kingside" : "queenside"));
 		}
 	}
 
@@ -125,39 +126,44 @@ BoardManager.prototype.movePieceToSqr = function(pieceID, toSqrID, speculating){
 	// Check if we need to promote pawn
 	var promotion = null;
 	if(this.getPieceType(pieceID) == "P" && shouldPawnBePromoted.call(this, pieceID)){
-		promotion = promotePawn.call(this, pieceID, speculating);
+		promotePawn.call(this, pieceID, speculating, function(promotionData){
+			promotion = promotionData;
+			finishMove.call(this);
+		}, this);
+	}else{
+		finishMove.call(this);
 	}
 
-	// We may have opened up new attacks or closed off old attacks for strafing pieces (Queen, Bishop and Rook), so update their attack data as well
-	var allyStrafingPieces = this.getAllPiecesForPlayer(playerMovingPiece, "UNCAPTURED", ["P", "N", "K", pieceID]);
-	updateAttackDataForPieces.call(this, allyStrafingPieces);
-	var enemyStrafingPieces = this.getAllPiecesForPlayer(opponent, "UNCAPTURED", ["P", "N", "K"]);
-	updateAttackDataForPieces.call(this, enemyStrafingPieces);
+	function finishMove(){
+		// We may have opened up new attacks or closed off old attacks for strafing pieces (Queen, Bishop and Rook), so update their attack data as well
+		var allyStrafingPieces = this.getAllPiecesForPlayer(playerMovingPiece, "UNCAPTURED", ["P", "N", "K", pieceID]);
+		updateAttackDataForPieces.call(this, allyStrafingPieces);
+		var enemyStrafingPieces = this.getAllPiecesForPlayer(opponent, "UNCAPTURED", ["P", "N", "K"]);
+		updateAttackDataForPieces.call(this, enemyStrafingPieces);
 
-	if(!speculating){
-		moves.push({pieceID: pieceID, sqrID: toSqrID});
-		gameEvent.fire("PiecesUpdated", {moves: moves, capture: capture, promotion: promotion});
+		if(!speculating){
+			moves.push({pieceID: pieceID, sqrID: toSqrID});
+			gameEvent.fire("PiecesUpdated", {moves: moves, capture: capture, promotion: promotion});
+		}
+
+		// Check for end of game conditions
+		this.boardStatus.checkmate = false;
+		this.boardStatus.stalemate = false;
+		this.boardStatus.winningPlayer = null;
+		this.boardStatus.playerInCheck = null;
+
+		if(isPlayerInCheck.call(this, opponent) && hasCheckmateOccurred.call(this)){
+			this.boardStatus.checkmate = true;
+			this.boardStatus.winningPlayer = playerMovingPiece;
+		}else if(hasStalemateOccured.call(this)){
+			this.boardStatus.stalemate = true;
+		}else if(isPlayerInCheck.call(this, opponent)){
+			this.boardStatus.playerInCheck = opponent;
+		}
+
+		// Increment turn, needs to be the last thing we do
+		this.turnID++;
 	}
-
-	// Check for end of game conditions
-	this.boardStatus.checkmate = false;
-	this.boardStatus.stalemate = false;
-	this.boardStatus.winningPlayer = null;
-	this.boardStatus.playerInCheck = null;
-
-	if(isPlayerInCheck.call(this, opponent) && hasCheckmateOccurred.call(this)){
-		this.boardStatus.checkmate = true;
-		this.boardStatus.winningPlayer = playerMovingPiece;
-	}else if(hasStalemateOccured.call(this)){
-		this.boardStatus.stalemate = true;
-	}else if(isPlayerInCheck.call(this, opponent)){
-		this.boardStatus.playerInCheck = opponent;
-	}
-
-	// Increment turn, needs to be the last thing we do
-	this.turnID++;
-
-	return {checkmate: this.boardStatus.checkmate, stalemate: this.boardStatus.stalemate};
 };
 
 /**
@@ -827,6 +833,13 @@ BoardManager.prototype.getTurnID = function(){
 /************************/
 
 /**
+ * Returns the board status checkmate and stalemate flags;
+ */
+BoardManager.prototype.getBoardStatus = function(){
+	return {checkmate: this.boardStatus.checkmate, stalemate: this.boardStatus.stalemate};
+};
+
+/**
  * Returns a copy of the current board state.
  */
 BoardManager.prototype.saveBoardState = function(){
@@ -1190,48 +1203,50 @@ function shouldPawnBePromoted(pieceID){
  * @param {boolean} speculating true, to signify that this is a speculative promotion, not an actual promotion, and to suppress console
  * 							    logging and events.
  */
-function promotePawn(pieceID, speculating){
+function promotePawn(pieceID, speculating, onPromotionCallback, context){
 	validatePieceID(pieceID);
 
 	var owner = this.getPieceOwner(pieceID),
 		sqrID = this.getSqrWithPiece(pieceID),
-		choice = "",
-		limit = 0;
+		choice = "";
 
 	if(!speculating && owner == settings.humanPlayer){
-		var promotions = ["Q", "N", "R", "B"];
-
-		while(promotions.indexOf(choice) == -1){
-			choice = prompt("Which piece would you like to promote your pawn at " + sqrID + " to? Q/N/R/B");
-			choice = choice.trim();
-			if(promotions.indexOf(choice == -1)) console.log("Invalid choice.");
-			limit++;
-			if(limit > 1000){
-				throw "Infinite loop prevented";
-			}
-		}
+		ui.showMenu(
+			"Select promotion for pawn",
+			[{label: "Queen", value: "Q"}, {label: "Bishop", value: "B"}, {label: "Knight", value: "N"}, {label: "Rook", value: "R"}],
+			function(selectedPromotion){
+				choice = selectedPromotion;
+				var promotion = doPromotion.call(this);
+				onPromotionCallback.call(context, promotion);
+			},
+			this
+		);
 	}else{
 		choice = "Q";
+		var promotion = doPromotion.call(this);
+		onPromotionCallback.call(context, promotion);
 	}
 
-	var promotedPieceID = pieceID + choice, 
+	function doPromotion(){
+		var promotedPieceID = pieceID + choice, 
 		pieceData = this.pieces[pieceID];
 
-	// Update pieces and board2piece with new promoted piece ID
-	delete this.pieces[pieceID];
-	this.board2piece[sqrID] = promotedPieceID;
-	this.pieces[promotedPieceID] = pieceData;
+		// Update pieces and board2piece with new promoted piece ID
+		delete this.pieces[pieceID];
+		this.board2piece[sqrID] = promotedPieceID;
+		this.pieces[promotedPieceID] = pieceData;
 
-	// Remove old attack data for pawn
-	updateAttackDataForPiece.call(this, pieceID);
-	// Add new attack data for promoted piece
-	updateAttackDataForPiece.call(this, promotedPieceID);
+		// Remove old attack data for pawn
+		updateAttackDataForPiece.call(this, pieceID);
+		// Add new attack data for promoted piece
+		updateAttackDataForPiece.call(this, promotedPieceID);
 
-	if(!speculating){
-		console.log("Pawn at " + sqrID + " promoted to " + choice);
+		if(!speculating){
+			ui.log("Pawn at " + sqrID + " promoted to " + choice);
+		}
+
+		return {oldID: pieceID, newID: promotedPieceID, promotion: owner + choice};
 	}
-
-	return {oldID: pieceID, newID: promotedPieceID, promotion: owner + choice};
 }
 
 /******************************/
@@ -1385,14 +1400,14 @@ function validatePlayer(player){
  */
 function onAnimatePiecesFinished(){
 	if(this.boardStatus.checkmate){
-		console.log("Checkmate. " + this.boardStatus.winningPlayer + " wins.");
+		ui.log("Checkmate. " + this.boardStatus.winningPlayer + " wins.");
 		gameEvent.fire("Checkmate", {winningPlayer: this.boardStatus.winningPlayer});
 	}else if(this.boardStatus.stalemate){
-		console.log("Stalemate.");
+		ui.log("Stalemate.");
 		gameEvent.fire("Stalemate");
 	}else{
 		if(this.boardStatus.playerInCheck){
-			console.log(this.boardStatus.playerInCheck + " is in check");
+			ui.log(this.boardStatus.playerInCheck + " is in check");
 		}
 		gameEvent.fire("NextTurn");
 	}

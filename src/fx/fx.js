@@ -9,7 +9,7 @@ var FX = function(onGraphicsLoadedCallback, context){
 	this.stage = new PIXI.Container();
 
 	// Add renderer canvas to HTML view
-	document.body.appendChild(this.renderer.view);
+	document.getElementById("canvasContainer").appendChild(this.renderer.view);
 	
 	// Graphics managers
 	this.boardFX = new BoardFX(this.renderer, this.stage);

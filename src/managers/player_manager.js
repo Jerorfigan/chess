@@ -1,5 +1,6 @@
 var gameEvent = require("../game_event.js");
 var settings = require("../settings.js");
+var ui = require("../user_prompt.js");
 
 var PlayerManager = function(boardManager){
 	this.boardManager = boardManager;
@@ -32,7 +33,7 @@ function onPlayerSelectedSquare(eventName, data){
 				else if(this.boardManager.isValidMove(this.lastSelectedSquareWithOwnedPiece, sqrID)){
 					moveLastSelectedPieceToSqrID.call(this, sqrID);
 				}else{
-					console.log("Invalid move.");
+					ui.log("Invalid move.");
 				}
 			}
 		}
@@ -41,10 +42,10 @@ function onPlayerSelectedSquare(eventName, data){
 		else if(this.boardManager.squareHasPlayerPiece(sqrID, this.player)){
 			selectPieceAtSqr.call(this, this.boardManager.getPieceAtSqr(sqrID), sqrID);
 		}else{
-			console.log("No owned piece at this square.");
+			ui.log("No owned piece at this square.");
 		}
 	}else{
-		console.log("It is not your turn.");
+		ui.log("It is not your turn.");
 	}
 }
 
@@ -57,6 +58,6 @@ function moveLastSelectedPieceToSqrID(sqrID){
 function selectPieceAtSqr(pieceID, sqrID){
 	this.lastSelectedSquareWithOwnedPiece = sqrID;
 	this.lastSelectedPiece = pieceID;
-	console.log("Player has selected " + pieceID + " at square: " + sqrID);
+	ui.log("Player has selected " + pieceID + " at square: " + sqrID);
 	gameEvent.fire("PieceSelected", {pieceID: pieceID, sqrID: sqrID, moves: this.boardManager.getSqrsPieceCan(pieceID)});
 }

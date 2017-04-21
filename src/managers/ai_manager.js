@@ -1,6 +1,7 @@
 var gameEvent = require("../game_event.js");
 var R = require("../../lib/ramda.min.js");
 var settings = require("../settings.js");
+var ui = require("../user_prompt.js");
 
 var AIManager = function(boardManager){
 	this.boardManager = boardManager;
@@ -89,7 +90,8 @@ function makeSmartMove(){
 					// If current move is valid
 					if(thisObj.boardManager.canPieceMoveToSqr(currPiece, currMove)){
 						// Perform current move
-						var gameOverFlags = thisObj.boardManager.movePieceToSqr(currPiece, currMove, true);
+						thisObj.boardManager.movePieceToSqr(currPiece, currMove, true);
+						var gameOverFlags = thisObj.boardManager.getBoardStatus();
 
 						// Get heuristic value of board state after current move with regard to player making the move
 						var quality = getQualValOfCurrBoardForPlayer.call(thisObj, currPlayer);
@@ -221,12 +223,12 @@ function makeSmartMove(){
 		// Log AI time spent thinking
 		var endTime = new Date(),
 			secondsSpentThinking = (endTime.getTime() - startTime.getTime()) / 1000;
-		console.log("AI spent " + secondsSpentThinking + " seconds analyzing next move.");
+		ui.log("AI spent " + secondsSpentThinking + " seconds analyzing next move.");
 
 		// If move sequence list is empty
 		if(moveSeqList.length == 0){
 			// Report that AI could not find valid move 
-			console.log("AI could not find valid move");
+			ui.log("AI could not find valid move");
 		// If move sequence list contains only 1 move sequence
 		}else if(moveSeqList.length == 1){
 			// Perform the move
@@ -262,7 +264,7 @@ function makeSmartMove(){
 	}
 
 	// Use function that repeatedly calls itself after timeout instead of while loop so we don't block rendering/other game events
-	console.log("AI is thinking...");
+	ui.log("AI is thinking...");
 	var startTime = new Date();
 	think.call(this);
 }
@@ -364,7 +366,7 @@ function makeRandomValidMove(){
 		// don't keep trying to move a piece that has no valid moves
 		var nonCapturedPieces = this.boardManager.getAllPiecesForPlayer(this.player, "UNCAPTURED", excludedPieces);
 		if(nonCapturedPieces.length == 0){
-			console.log("AI could not find valid move");
+			ui.log("AI could not find valid move");
 			break;
 		}
 		var chosenPiece = nonCapturedPieces[Math.floor(nonCapturedPieces.length * Math.random())];
