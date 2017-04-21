@@ -23,7 +23,7 @@ module.exports = FX;
 
 function loadResources(onGraphicsLoadedCallback, context){
 	PIXI.loader
-	  	.add("assets/img/pieces_tileset.json")
+	  	.add(settings.tilesetAtlasPath)
 	 	.load(function(){ 
 	 		onGraphicsLoadedCallback.call(context);
 	 	});
