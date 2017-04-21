@@ -6,8 +6,8 @@ var settings = {
 	spf: 1/30, 					           				// seconds per frame
 	fpms: 30/1000, 				           				// frames per millisecond
 	mspf: 1000/30, 				           				// milliseconds per frame 
-	canvasWidth: 600,                      				// in px
-	canvasHeight: 600,                     				// in px
+	canvasWidth: 500,                      				// in px
+	canvasHeight: 500,                     				// in px
 
 	// Game board
 	rankAndFileMarkerFont: 'Lucida Console',

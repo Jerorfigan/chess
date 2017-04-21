@@ -1,3 +1,7 @@
+#gameContainer{
+	margin: 0 auto;
+}
+
 #canvasContainer{
 	position: relative;
 }

@@ -2,10 +2,13 @@ var R = require("../lib/ramda.min.js");
 var settings = require("./settings.js");
 
 var ui = {
+	_gameContainer: null,
 	_canvasContainer: null,
 	_gameLogContainer: null,
 	_log: null,
 	_init: function(){
+		this._gameContainer = document.getElementById("gameContainer");
+		this._gameContainer.setAttribute("style", "width: " + settings.canvasWidth + "px;");
 		this._canvasContainer = document.getElementById("canvasContainer");
 		this._gameLogContainer = document.getElementById("gameLogContainer");
 		this._log = createLog.call(this);
