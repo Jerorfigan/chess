@@ -6,8 +6,8 @@ var settings = {
 	spf: 1/30, 					           				// seconds per frame
 	fpms: 30/1000, 				           				// frames per millisecond
 	mspf: 1000/30, 				           				// milliseconds per frame 
-	canvasWidth: 500,                      				// in px
-	canvasHeight: 500,                     				// in px
+	canvasWidth: document.getElementById("gameContainer").clientWidth, // in px
+	canvasHeight: document.getElementById("gameContainer").clientWidth, // in px
 	//tilesetAtlasPath: "http://ambrosemcjunkin.com/js/games/chess/img/pieces_tileset.json",    
 	tilesetAtlasPath: "assets/img/pieces_tileset.json",   
 

@@ -93,7 +93,7 @@ function createLog(){
 			this._container.setAttribute("style", ""); 
 
 			this._textarea = document.createElement("textarea");
-			this._textarea.setAttribute("style", "display: block; width: " + settings.canvasWidth + "px; height: 100px; padding: 5px; resize: none;"); 
+			this._textarea.setAttribute("style", "display: block; width: " + settings.canvasWidth + "px; height: 100px; padding: 5px; resize: none; box-sizing: border-box;"); 
 			this._textarea.readOnly = true;
 
 			this._container.appendChild(this._textarea);
