@@ -8,7 +8,8 @@ var settings = {
 	mspf: 1000/30, 				           				// milliseconds per frame 
 	canvasWidth: 500,                      				// in px
 	canvasHeight: 500,                     				// in px
-	tilesetAtlasPath: "assets/img/pieces_tileset.json",      
+	//tilesetAtlasPath: "http://ambrosemcjunkin.com/js/games/chess/img/pieces_tileset.json",    
+	tilesetAtlasPath: "assets/img/pieces_tileset.json",   
 
 	// Game board
 	rankAndFileMarkerFont: 'Lucida Console',

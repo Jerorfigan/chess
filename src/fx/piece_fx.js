@@ -1,5 +1,6 @@
 var R = require("../../lib/ramda.min.js");
 var gameEvent = require("../game_event.js");
+var settings = require("../settings.js");
 
 var PieceFX = function(renderer, stage, boardFX){
 	this.renderer = renderer;
@@ -64,7 +65,7 @@ PieceFX.prototype.renderPieces = function(boardState){
 		this.pieceID2sprite = {};
 	}
 
-	var pieceTextures = PIXI.loader.resources["assets/img/pieces_tileset.json"].textures,
+	var pieceTextures = PIXI.loader.resources[settings.tilesetAtlasPath].textures,
 		boardFX = this.boardFX,
 		thisObj = this;
 
@@ -214,7 +215,7 @@ function onPiecesUpdated(eventName, data){
 }
 
 function promotePawn(data){
-	var pieceTextures = PIXI.loader.resources["assets/img/pieces_tileset.json"].textures,
+	var pieceTextures = PIXI.loader.resources[settings.tilesetAtlasPath].textures,
 		newSprite = new PIXI.Sprite(pieceTextures[this.pieceID2TextureID[data.promotion]]),
 		oldSprite = this.pieceID2sprite[data.oldID],
 		sqrWidth = this.boardFX.getSqrWidth();
